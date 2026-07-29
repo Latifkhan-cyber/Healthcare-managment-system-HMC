@@ -1,0 +1,3 @@
+# Root requirements for platforms that build from the repo root (e.g. Vercel).
+# Reuses the pinned backend dependencies.
+-r backend/requirements.txt
