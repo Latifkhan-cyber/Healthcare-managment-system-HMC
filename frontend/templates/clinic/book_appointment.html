@@ -27,13 +27,15 @@
                  id="doctor-card-{{ doc.id }}">
                 <div class="doctor-avatar">
                     {% if doc.profile_photo %}
-                        <img src="{{ doc.profile_photo.url }}" alt="" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                        <img src="{{ doc.profile_photo.url }}" alt="Dr. {{ doc.get_full_name|default:doc.username }}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
                     {% else %}
                         {{ doc.username|slice:":1"|upper }}
                     {% endif %}
                 </div>
                 <div class="doctor-name">Dr. {{ doc.get_full_name|default:doc.username }}</div>
                 <div class="doctor-spec">{{ doc.specialization|default:"General" }}</div>
+                <div style="font-size: 0.75rem; color: var(--gray-500); margin-bottom: 8px; min-height: 36px;">{{ doc.address|default:"Main Hospital Clinic" }}</div>
+                <div style="font-size: 0.76rem; color: var(--gray-600); margin-bottom: 8px; min-height: 40px;">{{ doc.bio|default:"Compassionate care with a focus on patient comfort and timely treatment." }}</div>
                 <div class="doctor-fee">PKR {{ doc.consultation_fee }}</div>
             </div>
             {% empty %}

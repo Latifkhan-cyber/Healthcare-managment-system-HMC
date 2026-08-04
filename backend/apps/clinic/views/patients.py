@@ -1,9 +1,12 @@
 # Patient Views
+from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Q, Sum
-from datetime import date
+from datetime import date, timedelta
+from django.core.files.base import ContentFile
+from pathlib import Path
 
 from ..models import (
     Appointment, QueueToken, PatientHistory,
@@ -14,6 +17,82 @@ from backend.apps.accounts.models import User
 
 from .appointments import estimate_wait_time
 from ..notification_service import create_notification
+
+
+def _assign_doctor_photo(doctor, photo_name):
+    """Attach a bundled doctor image to a doctor account if one is not already set."""
+    if doctor.profile_photo:
+        return
+
+    image_path = Path(settings.BASE_DIR.parent, 'frontend', 'static', 'images', 'doctors', photo_name)
+    if not image_path.exists():
+        return
+
+    with image_path.open('rb') as img_file:
+        doctor.profile_photo.save(photo_name, ContentFile(img_file.read()), save=True)
+
+
+def _ensure_doctors_exist():
+    """Ensure a complete roster of doctor accounts is available for booking forms and admin flows."""
+    doctor_specs = [
+        {'username': 'dr_hira', 'first_name': 'Hira', 'last_name': 'Sheheryar', 'specialization': 'Gynecology', 'consultation_fee': 1500, 'bio': 'Specializes in women’s health, prenatal care, and minimally invasive gynecological treatments.', 'photo': 'doctor1.jpg'},
+        {'username': 'dr_saba', 'first_name': 'Saba', 'last_name': 'Gul', 'specialization': 'Pediatrics', 'consultation_fee': 1200, 'bio': 'Experienced pediatrician focused on child wellness, vaccinations, and routine growth monitoring.', 'photo': 'doctor2.jpg'},
+        {'username': 'dr_taj', 'first_name': 'Taj', 'last_name': 'Bahadur', 'specialization': 'Cardiology', 'consultation_fee': 1800, 'bio': 'Cardiologist with expertise in heart disease screening, hypertension, and preventive cardiac care.', 'photo': 'doctor3.jpg'},
+        {'username': 'dr_idrees', 'first_name': 'Idrees', 'last_name': 'Khan', 'specialization': 'General Medicine', 'consultation_fee': 1000, 'bio': 'General medicine physician offering diagnosis, chronic disease management, and family care.', 'photo': 'doctor1.jpg'},
+        {'username': 'dr_ahmed', 'first_name': 'Ahmed', 'last_name': 'Raza', 'specialization': 'Orthopedics', 'consultation_fee': 1400, 'bio': 'Orthopedic specialist focused on bone, joint, and sports injury care.', 'photo': 'doctor2.jpg'},
+    ]
+
+    for spec in doctor_specs:
+        doctor, created = User.objects.get_or_create(
+            username=spec['username'],
+            defaults={
+                'first_name': spec['first_name'],
+                'last_name': spec['last_name'],
+                'email': f"{spec['username']}@clinic.com",
+                'role': 'DOCTOR',
+                'specialization': spec['specialization'],
+                'consultation_fee': spec['consultation_fee'],
+                'address': f"{spec['specialization']} Clinic, Main Hospital Lane",
+            }
+        )
+
+        if not created:
+            doctor.first_name = spec['first_name']
+            doctor.last_name = spec['last_name']
+            doctor.email = f"{spec['username']}@clinic.com"
+            doctor.role = 'DOCTOR'
+            doctor.specialization = spec['specialization']
+            doctor.consultation_fee = spec['consultation_fee']
+            doctor.address = f"{spec['specialization']} Clinic, Main Hospital Lane"
+            doctor.save(update_fields=['first_name', 'last_name', 'email', 'role', 'specialization', 'consultation_fee', 'address'])
+
+        if not doctor.has_usable_password() or doctor.username in {'dr_hira', 'dr_saba', 'dr_taj', 'dr_idrees', 'dr_ahmed'}:
+            doctor.set_password('doctor123')
+            doctor.save(update_fields=['password'])
+
+        _assign_doctor_photo(doctor, spec.get('photo', 'doctor1.jpg'))
+
+    return User.objects.filter(role='DOCTOR').order_by('id')
+
+
+def _validate_appointment_date(raw_date):
+    if not raw_date:
+        raise ValueError('Appointment date is required.')
+
+    try:
+        selected_date = date.fromisoformat(raw_date)
+    except ValueError as exc:
+        raise ValueError('Please select a valid appointment date.') from exc
+
+    today = date.today()
+    if selected_date < today:
+        raise ValueError('You cannot book for a past date. Please select today or a future date.')
+
+    max_date = today + timedelta(days=365)
+    if selected_date > max_date:
+        raise ValueError(f'You can only book up to 1 year in advance (max: {max_date.strftime("%B %d, %Y")}).')
+
+    return selected_date
 
 
 @login_required
@@ -86,7 +165,7 @@ def walkin_booking(request):
         messages.error(request, "Access denied.")
         return redirect('dashboard')
 
-    doctors = User.objects.filter(role='DOCTOR')
+    doctors = _ensure_doctors_exist()
     existing_patients = User.objects.filter(role='PATIENT')
 
     if request.method == 'POST':
@@ -128,8 +207,17 @@ def walkin_booking(request):
             patient = get_object_or_404(User, id=patient_id, role='PATIENT')
 
         doctor_id = request.POST.get('doctor_id')
+        if not doctor_id:
+            messages.error(request, 'Please select a doctor before confirming the booking.')
+            return redirect('clinic:walkin_booking')
+
         doctor = get_object_or_404(User, id=doctor_id, role='DOCTOR')
-        appt_date = request.POST.get('appointment_date')
+        try:
+            appt_date = _validate_appointment_date(request.POST.get('appointment_date'))
+        except ValueError as exc:
+            messages.error(request, str(exc))
+            return redirect('clinic:walkin_booking')
+
         time_slot = request.POST.get('time_slot')
         reason = request.POST.get('reason', 'Walk-in consultation')
 
@@ -172,9 +260,14 @@ def walkin_booking(request):
         )
         return redirect('clinic:manage_queue')
 
+    today = date.today().isoformat()
+    max_date = (date.today() + timedelta(days=365)).isoformat()
+
     return render(request, 'clinic/walkin_booking.html', {
         'doctors': doctors,
         'existing_patients': existing_patients,
+        'today': today,
+        'max_date': max_date,
     })
 
 

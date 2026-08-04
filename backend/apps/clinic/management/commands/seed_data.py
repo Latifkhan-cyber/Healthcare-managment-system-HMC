@@ -47,7 +47,32 @@ class Command(BaseCommand):
                 user.save()
                 self.stdout.write(f'  Created patient: {p["username"]}')
 
-        # ─── Doctor Schedules (Mon-Fri 9-5, Sat 9-1) ──────────────
+        # ─── Seed doctors ────────────────────────────────────────
+        doctor_specs = [
+            {'username': 'dr_hira', 'first_name': 'Hira', 'last_name': 'Sheheryar', 'specialization': 'Gynecology', 'consultation_fee': 1500},
+            {'username': 'dr_saba', 'first_name': 'Saba', 'last_name': 'Gul', 'specialization': 'Pediatrics', 'consultation_fee': 1200},
+            {'username': 'dr_taj', 'first_name': 'Taj', 'last_name': 'Bahadur', 'specialization': 'Cardiology', 'consultation_fee': 1800},
+            {'username': 'dr_idrees', 'first_name': 'Idrees', 'last_name': 'Khan', 'specialization': 'General Medicine', 'consultation_fee': 1000},
+            {'username': 'dr_ahmed', 'first_name': 'Ahmed', 'last_name': 'Raza', 'specialization': 'Orthopedics', 'consultation_fee': 1400},
+        ]
+
+        for spec in doctor_specs:
+            doctor, created = User.objects.get_or_create(
+                username=spec['username'],
+                defaults={
+                    'first_name': spec['first_name'],
+                    'last_name': spec['last_name'],
+                    'email': f"{spec['username']}@clinic.com",
+                    'role': 'DOCTOR',
+                    'specialization': spec['specialization'],
+                    'consultation_fee': spec['consultation_fee'],
+                }
+            )
+            if created:
+                doctor.set_password('doctor123')
+                doctor.save(update_fields=['password'])
+                self.stdout.write(f'  Created doctor: {doctor.username}')
+
         doctors = User.objects.filter(role='DOCTOR')
         for doc in doctors:
             for day in range(5):

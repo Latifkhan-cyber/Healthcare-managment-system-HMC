@@ -1,14 +1,73 @@
 # Appointments Views
+from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Q
 from datetime import date, timedelta, datetime
 from django.http import JsonResponse
+from django.core.files.base import ContentFile
+from pathlib import Path
 
 from ..models import Appointment, QueueToken, Payment, DoctorSchedule
 from ..forms import AppointmentForm
 from backend.apps.accounts.models import User
+
+
+def _assign_doctor_photo(doctor, photo_name):
+    """Attach a bundled doctor image to a doctor account if one is not already set."""
+    if doctor.profile_photo:
+        return
+
+    image_path = Path(settings.BASE_DIR.parent, 'frontend', 'static', 'images', 'doctors', photo_name)
+    if not image_path.exists():
+        return
+
+    with image_path.open('rb') as img_file:
+        doctor.profile_photo.save(photo_name, ContentFile(img_file.read()), save=True)
+
+
+def ensure_doctors_exist():
+    """Ensure a complete roster of doctor accounts is available for booking forms and admin flows."""
+    doctor_specs = [
+        {'username': 'dr_hira', 'first_name': 'Hira', 'last_name': 'Sheheryar', 'specialization': 'Gynecology', 'consultation_fee': 1500, 'bio': 'Specializes in women’s health, prenatal care, and minimally invasive gynecological treatments.', 'photo': 'doctor1.jpg'},
+        {'username': 'dr_saba', 'first_name': 'Saba', 'last_name': 'Gul', 'specialization': 'Pediatrics', 'consultation_fee': 1200, 'bio': 'Experienced pediatrician focused on child wellness, vaccinations, and routine growth monitoring.', 'photo': 'doctor2.jpg'},
+        {'username': 'dr_taj', 'first_name': 'Taj', 'last_name': 'Bahadur', 'specialization': 'Cardiology', 'consultation_fee': 1800, 'bio': 'Cardiologist with expertise in heart disease screening, hypertension, and preventive cardiac care.', 'photo': 'doctor3.jpg'},
+        {'username': 'dr_idrees', 'first_name': 'Idrees', 'last_name': 'Khan', 'specialization': 'General Medicine', 'consultation_fee': 1000, 'bio': 'General medicine physician offering diagnosis, chronic disease management, and family care.', 'photo': 'doctor1.jpg'},
+        {'username': 'dr_ahmed', 'first_name': 'Ahmed', 'last_name': 'Raza', 'specialization': 'Orthopedics', 'consultation_fee': 1400, 'bio': 'Orthopedic specialist focused on bone, joint, and sports injury care.', 'photo': 'doctor2.jpg'},
+    ]
+
+    for spec in doctor_specs:
+        doctor, created = User.objects.get_or_create(
+            username=spec['username'],
+            defaults={
+                'first_name': spec['first_name'],
+                'last_name': spec['last_name'],
+                'email': f"{spec['username']}@clinic.com",
+                'role': 'DOCTOR',
+                'specialization': spec['specialization'],
+                'consultation_fee': spec['consultation_fee'],
+                'address': f"{spec['specialization']} Clinic, Main Hospital Lane",
+            }
+        )
+
+        if not created:
+            doctor.first_name = spec['first_name']
+            doctor.last_name = spec['last_name']
+            doctor.email = f"{spec['username']}@clinic.com"
+            doctor.role = 'DOCTOR'
+            doctor.specialization = spec['specialization']
+            doctor.consultation_fee = spec['consultation_fee']
+            doctor.address = f"{spec['specialization']} Clinic, Main Hospital Lane"
+            doctor.save(update_fields=['first_name', 'last_name', 'email', 'role', 'specialization', 'consultation_fee', 'address'])
+
+        if not doctor.has_usable_password() or doctor.username in {'dr_hira', 'dr_saba', 'dr_taj', 'dr_idrees', 'dr_ahmed'}:
+            doctor.set_password('doctor123')
+            doctor.save(update_fields=['password'])
+
+        _assign_doctor_photo(doctor, spec.get('photo', 'doctor1.jpg'))
+
+    return User.objects.filter(role='DOCTOR').order_by('id')
 
 
 def estimate_wait_time(doctor, appointment_date):
@@ -42,8 +101,8 @@ def book_appointment(request):
     else:
         form = AppointmentForm()
 
-    doctors = User.objects.filter(role='DOCTOR').order_by('first_name')
-    specializations = list(User.objects.filter(role='DOCTOR')
+    doctors = ensure_doctors_exist().order_by('first_name')
+    specializations = list(doctors
                           .exclude(specialization__isnull=True)
                           .exclude(specialization='')
                           .values_list('specialization', flat=True)

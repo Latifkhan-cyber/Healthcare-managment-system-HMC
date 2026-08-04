@@ -5,11 +5,54 @@ from backend.apps.clinic.models import (
     Appointment, PatientHistory, Payment, QueueToken,
     DoctorSchedule, DoctorReview, LabTest, PaymentSettings
 )
+from backend.apps.clinic.views.appointments import ensure_doctors_exist
 from datetime import date, timedelta
 
 
 class AuthTests(TestCase):
     """Test authentication and role-based access."""
+
+    def test_walkin_booking_bootstraps_doctors_and_blocks_past_dates(self):
+        admin = User.objects.create_superuser(username='admin', password='admin123', role='ADMIN')
+        self.client.force_login(admin)
+
+        response = self.client.get(reverse('clinic:walkin_booking'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Dr. Hira')
+        self.assertContains(response, 'Dr. Saba')
+        self.assertContains(response, 'name="appointment_date"')
+        self.assertContains(response, 'min=')
+
+        doctor = User.objects.filter(role='DOCTOR').first()
+        response = self.client.post(reverse('clinic:walkin_booking'), {
+            'patient_type': 'new',
+            'first_name': 'Test',
+            'last_name': 'Patient',
+            'doctor_id': doctor.id,
+            'appointment_date': (date.today() - timedelta(days=1)).isoformat(),
+            'time_slot': '09:00',
+            'reason': 'Test visit',
+        })
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(Appointment.objects.count(), 0)
+
+    def test_book_appointment_page_shows_doctors_when_none_exist(self):
+        user = User.objects.create_user(username='patient', password='patient123', role='PATIENT')
+        self.client.force_login(user)
+
+        response = self.client.get(reverse('clinic:book_appointment'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Dr. Hira')
+        self.assertContains(response, 'Dr. Saba')
+
+    def test_seeded_doctors_receive_profile_photos(self):
+        doctors = ensure_doctors_exist()
+        doctor = doctors.get(username='dr_hira')
+
+        self.assertTrue(doctor.profile_photo)
+        self.assertIn('doctor', doctor.profile_photo.name.lower())
 
     def setUp(self):
         self.client = Client()
