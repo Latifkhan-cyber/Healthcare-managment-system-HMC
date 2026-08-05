@@ -1,3 +1,5 @@
+from django.conf import settings
+from django.core.files.base import ContentFile
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.forms import AuthenticationForm
@@ -7,6 +9,28 @@ from .forms import CustomUserCreationForm, StaffCreationForm
 from .models import User
 from django.db import models
 from datetime import date
+from pathlib import Path
+
+
+def _assign_staff_photo(staff):
+    """Attach a default portrait for doctor staff accounts, updating seeded defaults when needed."""
+    if staff.role != 'DOCTOR':
+        return
+
+    photo_name = 'doctor_male.jpg' if (staff.gender == 'MALE') else 'doctor1.jpg'
+    image_path = Path(settings.BASE_DIR.parent, 'frontend', 'static', 'images', 'doctors', photo_name)
+    if not image_path.exists():
+        return
+
+    current_name = Path(staff.profile_photo.name).name if staff.profile_photo else None
+    if current_name == photo_name:
+        return
+
+    if staff.profile_photo:
+        staff.profile_photo.delete(save=False)
+
+    with image_path.open('rb') as img_file:
+        staff.profile_photo.save(photo_name, ContentFile(img_file.read()), save=True)
 
 
 def home(request):
@@ -180,12 +204,13 @@ def create_staff(request):
         if form.is_valid():
             staff = form.save(commit=False)
             staff.save()
+            _assign_staff_photo(staff)
             messages.success(
                 request,
                 f"{staff.get_role_display()} account created for {staff.get_full_name() or staff.username}. "
                 f"Default password: staff123"
             )
-            return redirect('accounts:manage_staff')
+            return redirect('manage_staff')
     else:
         form = StaffCreationForm()
 
@@ -211,9 +236,17 @@ def edit_staff(request, user_id):
         fee = request.POST.get('consultation_fee')
         if fee:
             staff.consultation_fee = fee
+
+        if request.FILES.get('profile_photo'):
+            if staff.profile_photo:
+                staff.profile_photo.delete(save=False)
+            staff.profile_photo = request.FILES['profile_photo']
+
         staff.save()
+        if not staff.profile_photo:
+            _assign_staff_photo(staff)
         messages.success(request, f"Staff account updated for {staff.get_full_name() or staff.username}.")
-        return redirect('accounts:manage_staff')
+        return redirect('manage_staff')
 
     return render(request, 'accounts/edit_staff.html', {'staff': staff})
 
@@ -231,6 +264,6 @@ def delete_staff(request, user_id):
         name = staff.get_full_name() or staff.username
         staff.delete()
         messages.success(request, f"Staff account '{name}' has been deleted.")
-        return redirect('accounts:manage_staff')
+        return redirect('manage_staff')
 
     return render(request, 'accounts/delete_staff.html', {'staff': staff})

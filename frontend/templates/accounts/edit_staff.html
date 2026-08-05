@@ -5,15 +5,21 @@
 {% block content %}
 <div class="animate-fade-in-up" style="max-width: 600px; margin: 0 auto;">
     <div class="form-card">
-        <div class="form-header">
-            <div class="icon" style="background: var(--info-bg); color: var(--info);">
-                <i class="fas fa-user-edit"></i>
+        <div class="form-header" style="display: flex; align-items: center; gap: 16px;">
+            <div style="width: 64px; height: 64px; border-radius: 50%; background: var(--info-bg); color: var(--info); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.1rem; flex-shrink: 0; overflow: hidden; border: 2px solid var(--gray-100);">
+                {% if staff.profile_photo %}
+                    <img src="{{ staff.profile_photo.url }}" alt="{{ staff.get_full_name|default:staff.username }}" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+                {% else %}
+                    {{ staff.username|slice:":1"|upper }}
+                {% endif %}
             </div>
-            <h2>Edit {{ staff.get_role_display }}</h2>
-            <p>Update account details for {{ staff.get_full_name|default:staff.username }}</p>
+            <div>
+                <h2>Edit {{ staff.get_role_display }}</h2>
+                <p>Update account details for {{ staff.get_full_name|default:staff.username }}</p>
+            </div>
         </div>
 
-        <form method="post">
+        <form method="post" enctype="multipart/form-data">
             {% csrf_token %}
 
             <div class="form-row">
@@ -46,6 +52,12 @@
                     <option value="FEMALE" {% if staff.gender == 'FEMALE' %}selected{% endif %}>Female</option>
                     <option value="OTHER" {% if staff.gender == 'OTHER' %}selected{% endif %}>Other</option>
                 </select>
+            </div>
+
+            <div class="form-group">
+                <label>Profile Photo</label>
+                <input type="file" name="profile_photo" class="form-control" accept="image/*">
+                <div class="form-help">Upload a new photo to replace the current portrait.</div>
             </div>
 
             {% if staff.role == 'DOCTOR' %}

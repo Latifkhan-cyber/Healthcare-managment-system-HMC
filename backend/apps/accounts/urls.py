@@ -10,10 +10,10 @@ urlpatterns = [
     path('logout/', views.logout_view, name='logout'),
 
     # Staff Management (Admin)
-    path('admin/staff/', views.manage_staff, name='manage_staff'),
-    path('admin/staff/create/', views.create_staff, name='create_staff'),
-    path('admin/staff/<int:user_id>/edit/', views.edit_staff, name='edit_staff'),
-    path('admin/staff/<int:user_id>/delete/', views.delete_staff, name='delete_staff'),
+    path('staff/', views.manage_staff, name='manage_staff'),
+    path('staff/create/', views.create_staff, name='create_staff'),
+    path('staff/<int:user_id>/edit/', views.edit_staff, name='edit_staff'),
+    path('staff/<int:user_id>/delete/', views.delete_staff, name='delete_staff'),
 
     # Password Reset
     path('password-reset/',

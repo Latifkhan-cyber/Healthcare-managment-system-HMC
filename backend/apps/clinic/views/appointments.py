@@ -15,13 +15,17 @@ from backend.apps.accounts.models import User
 
 
 def _assign_doctor_photo(doctor, photo_name):
-    """Attach a bundled doctor image to a doctor account if one is not already set."""
-    if doctor.profile_photo:
-        return
-
+    """Attach a bundled doctor image to a doctor account, updating seeded defaults when needed."""
     image_path = Path(settings.BASE_DIR.parent, 'frontend', 'static', 'images', 'doctors', photo_name)
     if not image_path.exists():
         return
+
+    current_name = Path(doctor.profile_photo.name).name if doctor.profile_photo else None
+    if current_name == photo_name:
+        return
+
+    if doctor.profile_photo:
+        doctor.profile_photo.delete(save=False)
 
     with image_path.open('rb') as img_file:
         doctor.profile_photo.save(photo_name, ContentFile(img_file.read()), save=True)
@@ -30,11 +34,11 @@ def _assign_doctor_photo(doctor, photo_name):
 def ensure_doctors_exist():
     """Ensure a complete roster of doctor accounts is available for booking forms and admin flows."""
     doctor_specs = [
-        {'username': 'dr_hira', 'first_name': 'Hira', 'last_name': 'Sheheryar', 'specialization': 'Gynecology', 'consultation_fee': 1500, 'bio': 'Specializes in women’s health, prenatal care, and minimally invasive gynecological treatments.', 'photo': 'doctor1.jpg'},
-        {'username': 'dr_saba', 'first_name': 'Saba', 'last_name': 'Gul', 'specialization': 'Pediatrics', 'consultation_fee': 1200, 'bio': 'Experienced pediatrician focused on child wellness, vaccinations, and routine growth monitoring.', 'photo': 'doctor2.jpg'},
-        {'username': 'dr_taj', 'first_name': 'Taj', 'last_name': 'Bahadur', 'specialization': 'Cardiology', 'consultation_fee': 1800, 'bio': 'Cardiologist with expertise in heart disease screening, hypertension, and preventive cardiac care.', 'photo': 'doctor3.jpg'},
-        {'username': 'dr_idrees', 'first_name': 'Idrees', 'last_name': 'Khan', 'specialization': 'General Medicine', 'consultation_fee': 1000, 'bio': 'General medicine physician offering diagnosis, chronic disease management, and family care.', 'photo': 'doctor1.jpg'},
-        {'username': 'dr_ahmed', 'first_name': 'Ahmed', 'last_name': 'Raza', 'specialization': 'Orthopedics', 'consultation_fee': 1400, 'bio': 'Orthopedic specialist focused on bone, joint, and sports injury care.', 'photo': 'doctor2.jpg'},
+        {'username': 'dr_hira', 'first_name': 'Hira', 'last_name': 'Sheheryar', 'specialization': 'Gynecology', 'consultation_fee': 1500, 'bio': 'Specializes in women’s health, prenatal care, and minimally invasive gynecological treatments.', 'photo': 'doctor1.jpg', 'gender': 'FEMALE'},
+        {'username': 'dr_saba', 'first_name': 'Saba', 'last_name': 'Gul', 'specialization': 'Pediatrics', 'consultation_fee': 1200, 'bio': 'Experienced pediatrician focused on child wellness, vaccinations, and routine growth monitoring.', 'photo': 'doctor_male.jpg', 'gender': 'MALE'},
+        {'username': 'dr_taj', 'first_name': 'Taj', 'last_name': 'Bahadur', 'specialization': 'Cardiology', 'consultation_fee': 1800, 'bio': 'Cardiologist with expertise in heart disease screening, hypertension, and preventive cardiac care.', 'photo': 'doctor_male.jpg', 'gender': 'MALE'},
+        {'username': 'dr_idrees', 'first_name': 'Idrees', 'last_name': 'Khan', 'specialization': 'General Medicine', 'consultation_fee': 1000, 'bio': 'General medicine physician offering diagnosis, chronic disease management, and family care.', 'photo': 'doctor_male.jpg', 'gender': 'MALE'},
+        {'username': 'dr_ahmed', 'first_name': 'Ahmed', 'last_name': 'Raza', 'specialization': 'Orthopedics', 'consultation_fee': 1400, 'bio': 'Orthopedic specialist focused on bone, joint, and sports injury care.', 'photo': 'doctor_male.jpg', 'gender': 'MALE'},
     ]
 
     for spec in doctor_specs:
@@ -48,6 +52,7 @@ def ensure_doctors_exist():
                 'specialization': spec['specialization'],
                 'consultation_fee': spec['consultation_fee'],
                 'address': f"{spec['specialization']} Clinic, Main Hospital Lane",
+                'gender': spec.get('gender'),
             }
         )
 
@@ -59,7 +64,8 @@ def ensure_doctors_exist():
             doctor.specialization = spec['specialization']
             doctor.consultation_fee = spec['consultation_fee']
             doctor.address = f"{spec['specialization']} Clinic, Main Hospital Lane"
-            doctor.save(update_fields=['first_name', 'last_name', 'email', 'role', 'specialization', 'consultation_fee', 'address'])
+            doctor.gender = spec.get('gender') or doctor.gender
+            doctor.save(update_fields=['first_name', 'last_name', 'email', 'role', 'specialization', 'consultation_fee', 'address', 'gender'])
 
         if not doctor.has_usable_password() or doctor.username in {'dr_hira', 'dr_saba', 'dr_taj', 'dr_idrees', 'dr_ahmed'}:
             doctor.set_password('doctor123')
