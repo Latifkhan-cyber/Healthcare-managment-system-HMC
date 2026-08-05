@@ -74,10 +74,29 @@
                     <td>Dr. {{ payment.appointment.doctor.get_full_name|default:payment.appointment.doctor.username }}</td>
                     <td style="font-weight: 700;">PKR {{ payment.amount }}</td>
                     <td>
-                        {% if payment.method == 'CASH' %}<i class="fas fa-money-bill-wave" style="color: var(--success); margin-right: 4px;"></i> Cash (Walk-in)
-                        {% elif payment.method == 'JAZZCASH' %}<i class="fas fa-mobile-alt" style="color: #d93025; margin-right: 4px;"></i> JazzCash
-                        {% elif payment.method == 'EASYPAISA' %}<i class="fas fa-mobile-alt" style="color: var(--success); margin-right: 4px;"></i> EasyPaisa
-                        {% else %}<i class="fas fa-university" style="color: var(--info); margin-right: 4px;"></i> Bank{% endif %}
+                        {% if payment.method == 'CASH' %}
+                            <i class="fas fa-money-bill-wave" style="color: var(--success); margin-right: 4px;"></i>
+                            Cash (Walk-in)
+                            <div style="font-size: 0.75rem; color: var(--gray-500); margin-top: 4px;">Confirmed instantly at reception</div>
+                        {% elif payment.method == 'JAZZCASH' %}
+                            <i class="fas fa-mobile-alt" style="color: #d93025; margin-right: 4px;"></i>
+                            JazzCash (Online)
+                            <div style="font-size: 0.75rem; color: var(--gray-500); margin-top: 4px;">
+                                {% if payment.status == 'PAID' %}Verified by admin.{% else %}Pending admin verification.{% endif %}
+                            </div>
+                        {% elif payment.method == 'EASYPAISA' %}
+                            <i class="fas fa-mobile-alt" style="color: var(--success); margin-right: 4px;"></i>
+                            EasyPaisa (Online)
+                            <div style="font-size: 0.75rem; color: var(--gray-500); margin-top: 4px;">
+                                {% if payment.status == 'PAID' %}Verified by admin.{% else %}Pending admin verification.{% endif %}
+                            </div>
+                        {% else %}
+                            <i class="fas fa-university" style="color: var(--info); margin-right: 4px;"></i>
+                            Bank (Online)
+                            <div style="font-size: 0.75rem; color: var(--gray-500); margin-top: 4px;">
+                                {% if payment.status == 'PAID' %}Verified by admin.{% else %}Pending admin verification.{% endif %}
+                            </div>
+                        {% endif %}
                     </td>
                     <td><span class="status-badge status-{{ payment.status|lower }}">{{ payment.get_status_display }}</span></td>
                     <td>
@@ -107,14 +126,16 @@
                             </div>
                         {% elif payment.status == 'PAID' %}
                             <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                                {% if payment.method != 'CASH' %}
                                 <a href="{% url 'clinic:payment_receipt' payment.id %}" class="btn-ghost btn-sm" title="Download Receipt">
                                     <i class="fas fa-download"></i> Receipt
                                 </a>
+                                {% endif %}
                                 <a href="{% url 'clinic:process_refund' payment.id %}" class="btn-ghost btn-sm" style="color: var(--danger);" title="Process Refund">
                                     <i class="fas fa-undo"></i> Refund
                                 </a>
                             </div>
-                        {% elif payment.status == 'REFUNDED' %}
+                        {% elif payment.status == 'REFUNDED' and payment.method != 'CASH' %}
                             <a href="{% url 'clinic:payment_receipt' payment.id %}" class="btn-ghost btn-sm" title="Download Receipt">
                                 <i class="fas fa-download"></i> Receipt
                             </a>

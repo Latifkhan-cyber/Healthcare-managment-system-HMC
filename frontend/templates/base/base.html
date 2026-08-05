@@ -5,8 +5,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Healthcare | Healthcare Management{% endblock %}</title>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="preload" href="{% static 'css/style.css' %}" as="style">
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
     {% block extra_css %}{% endblock %}
 </head>
@@ -205,7 +209,7 @@
             <a href="{% url 'dashboard' %}" class="user-profile">
                 <div class="user-avatar">
                     {% if user.profile_photo %}
-                        <img src="{{ user.profile_photo.url }}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                        <img src="{{ user.profile_photo.url }}" alt="Profile" loading="lazy" decoding="async" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
                     {% else %}
                         {{ user.username|slice:":1"|upper }}
                     {% endif %}
@@ -247,7 +251,7 @@
                 <a href="{% url 'dashboard' %}" class="header-user">
                     <div class="avatar">
                         {% if user.profile_photo %}
-                            <img src="{{ user.profile_photo.url }}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                            <img src="{{ user.profile_photo.url }}" alt="Profile" loading="lazy" decoding="async" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
                         {% else %}
                             {{ user.username|slice:":1"|upper }}
                         {% endif %}
@@ -298,7 +302,7 @@
     </div>
     {% endif %}
 
-    <script src="{% static 'js/main.js' %}"></script>
+    <script src="{% static 'js/main.js' %}" defer></script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

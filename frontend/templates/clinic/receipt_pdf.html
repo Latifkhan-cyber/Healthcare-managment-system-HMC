@@ -13,7 +13,7 @@
         .receipt-title { text-align: right; }
         .receipt-title h2 { font-size: 22px; color: #0d9488; }
         .receipt-title p { color: #64748b; font-size: 12px; }
-        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 30px; }
+        .info-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; margin-bottom: 30px; }
         .info-block { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; }
         .info-block h3 { font-size: 11px; text-transform: uppercase; color: #64748b; letter-spacing: 1px; margin-bottom: 8px; }
         .info-block p { font-size: 14px; margin-bottom: 2px; }
@@ -56,6 +56,11 @@
             <p>Date: {{ appointment.appointment_date|date:"l, M d, Y" }}</p>
             <p>Time: {{ appointment.time_slot|time:"h:i A" }}</p>
         </div>
+        <div class="info-block">
+            <h3>Booking</h3>
+            <p class="name">{{ booking_type }}</p>
+            <p style="font-size: 13px; line-height: 1.5; color: #475569; margin-top: 8px;">{{ confirmation_note }}</p>
+        </div>
     </div>
 
     <table class="table">
@@ -87,6 +92,7 @@
             {% if payment.transaction_id %}
             <p style="font-size: 11px; color: #64748b; margin-top: 4px;">Transaction: {{ payment.transaction_id }}</p>
             {% endif %}
+            <p style="font-size: 11px; color: #64748b; margin-top: 4px;">{{ confirmation_note }}</p>
             <p style="margin-top: 12px;"><span class="status-badge">{{ payment.get_status_display }}</span></p>
         </div>
         <div class="qr-placeholder">

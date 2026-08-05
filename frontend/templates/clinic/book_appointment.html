@@ -27,7 +27,7 @@
                  id="doctor-card-{{ doc.id }}">
                 <div class="doctor-avatar">
                     {% if doc.profile_photo %}
-                        <img src="{{ doc.profile_photo.url }}" alt="Dr. {{ doc.get_full_name|default:doc.username }}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                        <img src="{{ doc.profile_photo.url }}" alt="Dr. {{ doc.get_full_name|default:doc.username }}" loading="lazy" decoding="async" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
                     {% else %}
                         {{ doc.username|slice:":1"|upper }}
                     {% endif %}

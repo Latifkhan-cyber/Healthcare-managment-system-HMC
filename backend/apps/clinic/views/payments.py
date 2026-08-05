@@ -158,12 +158,25 @@ def payment_receipt(request, payment_id):
     # Generate PDF using weasyprint
     from weasyprint import HTML
 
+    if payment.method == 'CASH':
+        booking_type = 'Walk-in Booking'
+        confirmation_note = 'Walk-in appointment confirmed instantly at reception by clinic staff.'
+    else:
+        booking_type = 'Online Appointment'
+        confirmation_note = (
+            'This online payment was verified by admin, and the appointment is now confirmed.'
+            if payment.status == 'PAID'
+            else 'This online payment requires admin verification to confirm the appointment.'
+        )
+
     context = {
         'payment': payment,
         'appointment': payment.appointment,
         'patient': payment.appointment.patient,
         'doctor': payment.appointment.doctor,
         'payment_settings': PaymentSettings.objects.first(),
+        'booking_type': booking_type,
+        'confirmation_note': confirmation_note,
     }
 
     html_string = render_to_string('clinic/receipt_pdf.html', context)

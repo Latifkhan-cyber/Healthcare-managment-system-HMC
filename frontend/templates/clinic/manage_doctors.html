@@ -335,7 +335,7 @@
       <div class="doc-card-top">
         <div class="doc-avatar">
           {% if doctor.profile_photo %}
-            <img src="{{ doctor.profile_photo.url }}" alt="Dr. {{ doctor.get_full_name }}">
+            <img src="{{ doctor.profile_photo.url }}" alt="Dr. {{ doctor.get_full_name }}" loading="lazy" decoding="async">
           {% else %}
             {{ doctor.username|slice:":1"|upper }}
           {% endif %}
