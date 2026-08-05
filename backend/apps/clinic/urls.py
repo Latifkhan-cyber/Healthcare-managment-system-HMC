@@ -40,6 +40,10 @@ urlpatterns = [
     path('admin/doctors/', views.manage_doctors, name='manage_doctors'),
     path('admin/doctors/<int:doctor_id>/schedule/', views.doctor_schedule, name='doctor_schedule'),
 
+    # Admin appointment actions
+    path('admin/appointment/<int:appointment_id>/confirm/', views.confirm_appointment, name='confirm_appointment'),
+    path('admin/appointment/<int:appointment_id>/reject/', views.reject_appointment, name='reject_appointment'),
+
     # Notifications
     path('notifications/', views.notifications, name='notifications'),
     path('notifications/<int:notif_id>/read/', views.mark_notification_read, name='mark_notification_read'),

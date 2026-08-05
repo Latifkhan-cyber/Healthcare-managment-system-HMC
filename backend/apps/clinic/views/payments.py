@@ -92,27 +92,32 @@ def verify_payment(request, payment_id):
         messages.error(request, "Access denied.")
         return redirect('dashboard')
     payment = get_object_or_404(Payment, id=payment_id)
+    # Mark payment as paid
     payment.status = 'PAID'
     payment.save()
     appointment = payment.appointment
-    appointment.status = 'CONFIRMED'
-    appointment.save()
 
-    # Generate queue token on confirmation
-    existing_count = QueueToken.objects.filter(
-        appointment__doctor=appointment.doctor,
-        appointment__appointment_date=appointment.appointment_date,
-        is_active=True
-    ).count()
-    token_number = existing_count + 1
-    estimated_wait = estimate_wait_time(
-        appointment.doctor, appointment.appointment_date
-    )
-    QueueToken.objects.create(
-        appointment=appointment,
-        token_number=token_number,
-        estimated_wait_minutes=estimated_wait
-    )
+    # If appointment already confirmed, avoid double-confirm and token duplication
+    if appointment.status != 'CONFIRMED':
+        appointment.status = 'CONFIRMED'
+        appointment.save()
+
+        # Only create a queue token if none exists and is active for this appointment
+        if not hasattr(appointment, 'queue_token') or not appointment.queue_token.is_active:
+            existing_count = QueueToken.objects.filter(
+                appointment__doctor=appointment.doctor,
+                appointment__appointment_date=appointment.appointment_date,
+                is_active=True
+            ).count()
+            token_number = existing_count + 1
+            estimated_wait = estimate_wait_time(
+                appointment.doctor, appointment.appointment_date
+            )
+            QueueToken.objects.create(
+                appointment=appointment,
+                token_number=token_number,
+                estimated_wait_minutes=estimated_wait
+            )
 
     # Notify patient
     create_notification(
@@ -274,24 +279,28 @@ def confirm_cash_payment(request, payment_id):
     payment.status = 'PAID'
     payment.save()
     appointment = payment.appointment
-    appointment.status = 'CONFIRMED'
-    appointment.save()
 
-    # Generate queue token
-    existing_count = QueueToken.objects.filter(
-        appointment__doctor=appointment.doctor,
-        appointment__appointment_date=appointment.appointment_date,
-        is_active=True
-    ).count()
-    token_number = existing_count + 1
-    estimated_wait = estimate_wait_time(
-        appointment.doctor, appointment.appointment_date
-    )
-    QueueToken.objects.create(
-        appointment=appointment,
-        token_number=token_number,
-        estimated_wait_minutes=estimated_wait
-    )
+    # Only confirm and create token if not already confirmed
+    if appointment.status != 'CONFIRMED':
+        appointment.status = 'CONFIRMED'
+        appointment.save()
+
+        # Prevent duplicate tokens for the same appointment
+        if not hasattr(appointment, 'queue_token') or not appointment.queue_token.is_active:
+            existing_count = QueueToken.objects.filter(
+                appointment__doctor=appointment.doctor,
+                appointment__appointment_date=appointment.appointment_date,
+                is_active=True
+            ).count()
+            token_number = existing_count + 1
+            estimated_wait = estimate_wait_time(
+                appointment.doctor, appointment.appointment_date
+            )
+            QueueToken.objects.create(
+                appointment=appointment,
+                token_number=token_number,
+                estimated_wait_minutes=estimated_wait
+            )
 
     # Notify patient
     create_notification(

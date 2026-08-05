@@ -12,6 +12,7 @@ from pathlib import Path
 from ..models import Appointment, QueueToken, Payment, DoctorSchedule
 from ..forms import AppointmentForm
 from backend.apps.accounts.models import User
+from ..notification_service import create_notification
 
 
 def _assign_doctor_photo(doctor, photo_name):
@@ -240,6 +241,88 @@ def appointment_detail(request, appointment_id):
         'medical_record': medical_record,
         'review': review,
     })
+
+
+@login_required
+def confirm_appointment(request, appointment_id):
+    """Admin/receptionist confirms a pending appointment and creates a queue token."""
+    if request.user.role not in ('ADMIN', 'RECEPTIONIST'):
+        messages.error(request, "Access denied.")
+        return redirect('dashboard')
+
+    appointment = get_object_or_404(Appointment, id=appointment_id)
+
+    # Only pending appointments should be confirmed here
+    if appointment.status == 'CONFIRMED':
+        messages.info(request, "Appointment already confirmed.")
+        return redirect('dashboard')
+
+    # Change status and create queue token if needed
+    appointment.status = 'CONFIRMED'
+    appointment.save()
+
+    token_number = None
+    if not hasattr(appointment, 'queue_token') or not appointment.queue_token.is_active:
+        existing_count = QueueToken.objects.filter(
+            appointment__doctor=appointment.doctor,
+            appointment__appointment_date=appointment.appointment_date,
+            is_active=True
+        ).count()
+        token_number = existing_count + 1
+        estimated_wait = estimate_wait_time(appointment.doctor, appointment.appointment_date)
+        QueueToken.objects.create(
+            appointment=appointment,
+            token_number=token_number,
+            estimated_wait_minutes=estimated_wait
+        )
+
+    # Notify patient
+    msg = f"Your appointment with Dr. {appointment.doctor.get_full_name()} on {appointment.appointment_date.strftime('%B %d, %Y')} at {appointment.time_slot} has been confirmed."
+    if token_number:
+        msg += f" Queue token: #{token_number}."
+
+    create_notification(
+        recipient=appointment.patient,
+        title="Appointment Confirmed",
+        message=msg,
+        notification_type='APPOINTMENT_CONFIRMED',
+    )
+
+    messages.success(request, "Appointment confirmed.")
+    return redirect('dashboard')
+
+
+@login_required
+def reject_appointment(request, appointment_id):
+    """Admin/receptionist rejects/cancels an appointment and notifies the patient."""
+    if request.user.role not in ('ADMIN', 'RECEPTIONIST'):
+        messages.error(request, "Access denied.")
+        return redirect('dashboard')
+
+    appointment = get_object_or_404(Appointment, id=appointment_id)
+
+    # If already cancelled or completed, inform user
+    if appointment.status in ('CANCELLED', 'COMPLETED'):
+        messages.info(request, "This appointment cannot be rejected.")
+        return redirect('dashboard')
+
+    appointment.status = 'CANCELLED'
+    appointment.save()
+
+    # Deactivate any existing queue token
+    if hasattr(appointment, 'queue_token'):
+        appointment.queue_token.is_active = False
+        appointment.queue_token.save()
+
+    create_notification(
+        recipient=appointment.patient,
+        title="Appointment Cancelled",
+        message=f"Your appointment with Dr. {appointment.doctor.get_full_name()} on {appointment.appointment_date.strftime('%B %d, %Y')} has been cancelled by the clinic.",
+        notification_type='APPOINTMENT_CANCELLED',
+    )
+
+    messages.success(request, "Appointment rejected and patient notified.")
+    return redirect('dashboard')
 
 
 @login_required
