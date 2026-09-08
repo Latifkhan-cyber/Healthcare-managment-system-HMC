@@ -1,39 +1,381 @@
 {% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Sign In | Healthcare Management{% endblock %}
+
+{% block extra_css %}
+<style>
+  .auth-page-container {
+    min-height: calc(100vh - 120px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+    box-sizing: border-box;
+    width: 100%;
+  }
+
+  .auth-card {
+    background: #ffffff;
+    width: 100%;
+    max-width: 440px;
+    border-radius: 18px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.06), 0 4px 10px -2px rgba(0, 0, 0, 0.03);
+    padding: 36px 32px;
+    box-sizing: border-box;
+    animation: authFadeIn 0.35s ease-out;
+  }
+
+  @keyframes authFadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .auth-header {
+    text-align: center;
+    margin-bottom: 28px;
+  }
+
+  .auth-icon-badge {
+    width: 54px;
+    height: 54px;
+    background: #f0fdfa;
+    color: #0d9488;
+    border-radius: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    margin-bottom: 14px;
+    border: 1px solid #ccfbf1;
+    box-shadow: 0 4px 12px rgba(13, 148, 136, 0.12);
+  }
+
+  .auth-title {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0 0 6px;
+    letter-spacing: -0.02em;
+  }
+
+  .auth-subtitle {
+    font-size: 0.92rem;
+    color: #64748b;
+    margin: 0;
+    line-height: 1.45;
+  }
+
+  /* Form Fields */
+  .auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .form-field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    text-align: left;
+  }
+
+  .form-field-group label {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #334155;
+  }
+
+  .input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+  }
+
+  .input-wrapper input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 12px 16px;
+    font-size: 0.95rem;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #0f172a;
+    font-family: inherit;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+    -webkit-appearance: none;
+  }
+
+  .input-wrapper input:focus {
+    border-color: #0d9488;
+    box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
+  }
+
+  .password-toggle-btn {
+    position: absolute;
+    right: 12px;
+    background: none;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: 0.95rem;
+    padding: 4px 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+  }
+
+  .password-toggle-btn:hover {
+    color: #475569;
+  }
+
+  .field-error-msg {
+    color: #e11d48;
+    font-size: 0.82rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 4px;
+  }
+
+  .form-non-field-errors {
+    background: #fff1f2;
+    border: 1px solid #fecdd3;
+    color: #be123c;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 0.88rem;
+    margin-bottom: 6px;
+    text-align: left;
+  }
+
+  .auth-submit-btn {
+    width: 100%;
+    background: #0d9488;
+    color: #ffffff;
+    font-size: 1rem;
+    font-weight: 700;
+    padding: 13px 20px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 4px 14px rgba(13, 148, 136, 0.25);
+    transition: all 0.2s ease;
+    margin-top: 8px;
+  }
+
+  .auth-submit-btn:hover {
+    background: #0f766e;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(13, 148, 136, 0.35);
+  }
+
+  .auth-submit-btn:active {
+    transform: translateY(0);
+  }
+
+  /* Auth Footer Links */
+  .auth-footer-links {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid #f1f5f9;
+    text-align: center;
+    font-size: 0.88rem;
+    color: #64748b;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .auth-link {
+    color: #0d9488;
+    font-weight: 600;
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .auth-link:hover {
+    color: #0f766e;
+    text-decoration: underline;
+  }
+
+  .forgot-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    font-size: 0.84rem;
+    color: #64748b;
+  }
+
+  .forgot-link:hover {
+    color: #0f172a;
+  }
+
+  .back-home-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 0.84rem;
+    color: #94a3b8;
+    text-decoration: none;
+    margin-top: 6px;
+    transition: color 0.2s;
+  }
+
+  .back-home-link:hover {
+    color: #475569;
+  }
+
+  /* Responsive for mobile */
+  @media (max-width: 480px) {
+    .auth-page-container {
+      padding: 16px 12px;
+    }
+    .auth-card {
+      padding: 26px 20px;
+      border-radius: 14px;
+    }
+    .auth-title {
+      font-size: 1.4rem;
+    }
+  }
+</style>
+{% endblock %}
+
 {% block public_content %}
-<div class="auth-wrapper">
-    <div class="auth-card">
-        <div class="form-header auth-header">
-            <div class="auth-icon">
-                <i class="fas fa-lock"></i>
-            </div>
-            <h2>Welcome Back</h2>
-            <p>Please enter your details to sign in</p>
-        </div>
-
-        <form method="post">
-            {% csrf_token %}
-            <input type="hidden" name="next" value="{{ request.GET.next }}">
-            {% for field in form %}
-                <div class="form-group">
-                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                    {{ field }}
-                    {% if field.errors %}
-                        <div class="form-error">{{ field.errors.0 }}</div>
-                    {% endif %}
-                </div>
-            {% endfor %}
-            <button type="submit" class="btn-primary btn-lg w-full" style="justify-content: center; margin-top: 8px;">
-                <i class="fas fa-sign-in-alt"></i>
-                Sign In
-            </button>
-        </form>
-
-        <div class="auth-footer">
-            <a href="{% url 'password_reset' %}"><i class="fas fa-key"></i> Forgot Password?</a>
-            <br><br>
-            Don't have an account? <a href="{% url 'signup' %}">Create Account</a>
-        </div>
+<div class="auth-page-container">
+  <div class="auth-card">
+    <!-- Header -->
+    <div class="auth-header">
+      <div class="auth-icon-badge">
+        <i class="fas fa-lock"></i>
+      </div>
+      <h1 class="auth-title">Welcome Back</h1>
+      <p class="auth-subtitle">Please enter your credentials to access your account</p>
     </div>
+
+    <!-- Non-field Errors (e.g. invalid username/password) -->
+    {% if form.non_field_errors %}
+      <div class="form-non-field-errors">
+        {% for error in form.non_field_errors %}
+          <div><i class="fas fa-circle-exclamation"></i> {{ error }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <!-- Form -->
+    <form method="post" class="auth-form" autocomplete="on">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ request.GET.next }}">
+
+      <!-- Username / ID Field -->
+      <div class="form-field-group">
+        <label for="{{ form.username.id_for_label }}">Username or Patient ID</label>
+        <div class="input-wrapper">
+          <input 
+            type="text" 
+            name="{{ form.username.name }}" 
+            id="{{ form.username.id_for_label }}"
+            value="{{ form.username.value|default:'' }}"
+            placeholder="e.g. MQ-000001 or username" 
+            required 
+            autofocus
+          >
+        </div>
+        {% if form.username.errors %}
+          <div class="field-error-msg">
+            <i class="fas fa-circle-exclamation"></i> {{ form.username.errors.0 }}
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Password Field with Toggle -->
+      <div class="form-field-group">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <label for="{{ form.password.id_for_label }}">Password</label>
+          <a href="{% url 'password_reset' %}" class="auth-link forgot-link">
+            Forgot password?
+          </a>
+        </div>
+        <div class="input-wrapper">
+          <input 
+            type="password" 
+            name="{{ form.password.name }}" 
+            id="{{ form.password.id_for_label }}"
+            placeholder="••••••••" 
+            required
+          >
+          <button 
+            type="button" 
+            class="password-toggle-btn" 
+            onclick="togglePasswordVisibility('{{ form.password.id_for_label }}', this)"
+            aria-label="Toggle password visibility"
+          >
+            <i class="far fa-eye"></i>
+          </button>
+        </div>
+        {% if form.password.errors %}
+          <div class="field-error-msg">
+            <i class="fas fa-circle-exclamation"></i> {{ form.password.errors.0 }}
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Submit Button -->
+      <button type="submit" class="auth-submit-btn">
+        <i class="fas fa-arrow-right-to-bracket"></i>
+        <span>Sign In</span>
+      </button>
+    </form>
+
+    <!-- Footer Links -->
+    <div class="auth-footer-links">
+      <div>
+        Don't have an account? 
+        <a href="{% url 'signup' %}" class="auth-link">Create Account</a>
+      </div>
+      <a href="{% url 'home' %}" class="back-home-link">
+        <i class="fas fa-arrow-left"></i> Back to Home
+      </a>
+    </div>
+  </div>
 </div>
 
+<script>
+  function togglePasswordVisibility(fieldId, btn) {
+    const input = document.getElementById(fieldId);
+    if (!input) return;
+    const icon = btn.querySelector('i');
+    if (input.type === 'password') {
+      input.type = 'text';
+      if (icon) {
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+      }
+    } else {
+      input.type = 'password';
+      if (icon) {
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+      }
+    }
+  }
+</script>
 {% endblock %}
