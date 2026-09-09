@@ -1,0 +1,113 @@
+{% extends 'base/base.html' %}
+{% block page_title %}My Patients{% endblock %}
+{% block page_subtitle %}View assigned patients, medical history, and past consultations{% endblock %}
+
+{% block content %}
+<!-- Search and Filter Bar -->
+<div class="data-card animate-fade-in-up delay-100" style="margin-bottom: 24px;">
+    <form method="get" action="{% url 'clinic:my_patients' %}" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 260px; position: relative;">
+            <i class="fas fa-search" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--gray-400);"></i>
+            <input type="text" name="q" value="{{ query }}" placeholder="Search by patient name, MRN ID, phone, or CNIC..." class="form-control" style="padding-left: 38px;">
+        </div>
+        <button type="submit" class="btn-primary">
+            <i class="fas fa-filter"></i> Search Patients
+        </button>
+        {% if query %}
+            <a href="{% url 'clinic:my_patients' %}" class="btn-ghost">
+                <i class="fas fa-times"></i> Clear
+            </a>
+        {% endif %}
+    </form>
+</div>
+
+<!-- Patient List -->
+<div class="data-card animate-fade-in-up delay-200">
+    <div class="data-card-header">
+        <div>
+            <h3><i class="fas fa-hospital-user" style="color: var(--primary-600); margin-right: 8px;"></i> Assigned Patients Directory</h3>
+            <span style="font-size: 0.8rem; color: var(--gray-500);">Showing {{ total_count }} patient{{ total_count|pluralize }}</span>
+        </div>
+    </div>
+    
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Patient ID</th>
+                    <th>Patient Name</th>
+                    <th>Demographics</th>
+                    <th>Contact</th>
+                    <th>Last Visit</th>
+                    <th>Total Visits</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in patients %}
+                <tr>
+                    <td>
+                        <span style="font-weight: 800; color: var(--primary-700); background: var(--primary-50); padding: 4px 10px; border-radius: 6px; font-size: 0.85rem;">
+                            {{ item.patient.patient_id|default:"N/A" }}
+                        </span>
+                    </td>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="width: 38px; height: 38px; border-radius: 10px; background: var(--primary-100); color: var(--primary-700); display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700;">
+                                {{ item.patient.username|slice:":1"|upper }}
+                            </div>
+                            <div>
+                                <a href="{% url 'clinic:patient_detail' item.patient.patient_id|default:item.patient.id %}" style="font-weight: 700; color: var(--gray-800); text-decoration: none;">
+                                    {{ item.patient.get_full_name|default:item.patient.username }}
+                                </a>
+                                <div style="font-size: 0.75rem; color: var(--gray-500);">Blood: {{ item.patient.blood_group|default:"Unspecified" }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div style="font-weight: 600; font-size: 0.85rem;">{{ item.gender|default:"—" }}</div>
+                        <div style="font-size: 0.75rem; color: var(--gray-500);">{% if item.age %}{{ item.age }} years old{% else %}Age not set{% endif %}</div>
+                    </td>
+                    <td>
+                        <div style="font-weight: 600; font-size: 0.85rem;"><i class="fas fa-phone" style="color: var(--gray-400); margin-right: 4px; font-size: 0.75rem;"></i> {{ item.patient.phone|default:"—" }}</div>
+                        <div style="font-size: 0.75rem; color: var(--gray-500);">{{ item.patient.email|default:"" }}</div>
+                    </td>
+                    <td>
+                        {% if item.last_visit %}
+                            <div style="font-weight: 600; font-size: 0.85rem;">{{ item.last_visit|date:"M d, Y" }}</div>
+                        {% else %}
+                            <span style="color: var(--gray-400); font-size: 0.85rem;">No visits yet</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge" style="background: var(--primary-50); color: var(--primary-700); font-weight: 700;">
+                            {{ item.visit_count }} visit{{ item.visit_count|pluralize }}
+                        </span>
+                    </td>
+                    <td>
+                        <div style="display: flex; gap: 8px;">
+                            <a href="{% url 'clinic:patient_detail' item.patient.patient_id|default:item.patient.id %}" class="btn-primary btn-sm" title="View Patient Medical History">
+                                <i class="fas fa-file-medical"></i> Medical History
+                            </a>
+                            <a href="{% url 'clinic:order_lab_test' %}" class="btn-icon info" title="Order Lab Test">
+                                <i class="fas fa-vial"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7">
+                        <div class="empty-state" style="padding: 40px;">
+                            <div class="empty-icon"><i class="fas fa-user-slash"></i></div>
+                            <h4>No patients found</h4>
+                            <p style="color: var(--gray-500); font-size: 0.9rem;">No patients match your search query or have been assigned yet.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

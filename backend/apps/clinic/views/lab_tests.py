@@ -52,10 +52,83 @@ def lab_tests(request):
 
 
 @login_required
+def order_lab_test(request):
+    """Admin, Doctor or Receptionist orders / creates a new lab test for a patient and assigns to a doctor."""
+    if request.user.role not in ('ADMIN', 'RECEPTIONIST', 'DOCTOR'):
+        messages.error(request, "Access denied.")
+        return redirect('dashboard')
+
+    patients = User.objects.filter(role='PATIENT').order_by('first_name', 'username')
+    doctors = User.objects.filter(role='DOCTOR').order_by('first_name')
+
+    if request.method == 'POST':
+        patient_id = request.POST.get('patient_id')
+        doctor_id = request.POST.get('doctor_id')
+        test_name = request.POST.get('test_name', '').strip()
+        test_category = request.POST.get('test_category', '').strip()
+        cost = request.POST.get('cost', '0')
+        status = request.POST.get('status', 'ORDERED')
+        results = request.POST.get('results', '').strip()
+        notes = request.POST.get('notes', '').strip()
+
+        if not patient_id or not test_name:
+            messages.error(request, "Patient and Test Name are required.")
+            return redirect('clinic:order_lab_test')
+
+        patient = get_object_or_404(User, id=patient_id, role='PATIENT')
+        if doctor_id:
+            doctor = User.objects.filter(id=doctor_id, role='DOCTOR').first()
+        elif request.user.role == 'DOCTOR':
+            doctor = request.user
+        else:
+            doctor = None
+
+        try:
+            cost_val = float(cost) if cost else 0.0
+        except ValueError:
+            cost_val = 0.0
+
+        lab_test = LabTest(
+            patient=patient,
+            doctor=doctor,
+            test_name=test_name,
+            test_category=test_category,
+            cost=cost_val,
+            status=status,
+            results=results,
+            notes=notes,
+        )
+
+        if status == 'RESULTS_RECEIVED':
+            lab_test.result_date = date.today()
+
+        if request.FILES.get('report_file'):
+            lab_test.report_file = request.FILES['report_file']
+
+        lab_test.save()
+
+        # Notify patient
+        create_notification(
+            recipient=patient,
+            title="Lab Test Ordered",
+            message=f"Lab test '{test_name}' has been ordered for you by Dr. {doctor.get_full_name() if doctor else 'the clinic'}.",
+            notification_type='GENERAL',
+        )
+
+        messages.success(request, f"Lab test '{test_name}' ordered for {patient.get_full_name()}.")
+        return redirect('clinic:lab_tests')
+
+    return render(request, 'clinic/order_lab_test.html', {
+        'patients': patients,
+        'doctors': doctors,
+    })
+
+
+@login_required
 def update_lab_test(request, test_id):
-    """Admin or Receptionist updates lab test status and uploads results."""
-    if request.user.role not in ('ADMIN', 'RECEPTIONIST'):
-        messages.error(request, "Only admin or receptionist can update lab tests.")
+    """Admin, Doctor or Receptionist updates lab test status and uploads results."""
+    if request.user.role not in ('ADMIN', 'RECEPTIONIST', 'DOCTOR'):
+        messages.error(request, "Access denied.")
         return redirect('clinic:lab_tests')
 
     lab_test = get_object_or_404(LabTest, id=test_id)

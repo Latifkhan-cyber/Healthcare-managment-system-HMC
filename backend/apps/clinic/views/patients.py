@@ -20,17 +20,13 @@ from ..notification_service import create_notification
 
 
 def _assign_doctor_photo(doctor, photo_name):
-    """Attach a bundled doctor image to a doctor account, updating seeded defaults when needed."""
+    """Attach a bundled doctor image to a doctor account only if no photo is set."""
+    if doctor.profile_photo:
+        return
+
     image_path = Path(settings.BASE_DIR.parent, 'frontend', 'static', 'images', 'doctors', photo_name)
     if not image_path.exists():
         return
-
-    current_name = Path(doctor.profile_photo.name).name if doctor.profile_photo else None
-    if current_name == photo_name:
-        return
-
-    if doctor.profile_photo:
-        doctor.profile_photo.delete(save=False)
 
     with image_path.open('rb') as img_file:
         doctor.profile_photo.save(photo_name, ContentFile(img_file.read()), save=True)
@@ -61,22 +57,16 @@ def _ensure_doctors_exist():
             }
         )
 
-        if not created:
-            doctor.first_name = spec['first_name']
-            doctor.last_name = spec['last_name']
-            doctor.email = f"{spec['username']}@clinic.com"
+        if not created and not doctor.role:
             doctor.role = 'DOCTOR'
-            doctor.specialization = spec['specialization']
-            doctor.consultation_fee = spec['consultation_fee']
-            doctor.address = f"{spec['specialization']} Clinic, Main Hospital Lane"
-            doctor.gender = spec.get('gender') or doctor.gender
-            doctor.save(update_fields=['first_name', 'last_name', 'email', 'role', 'specialization', 'consultation_fee', 'address', 'gender'])
+            doctor.save(update_fields=['role'])
 
-        if not doctor.has_usable_password() or doctor.username in {'dr_hira', 'dr_saba', 'dr_taj', 'dr_idrees', 'dr_ahmed'}:
+        if not doctor.has_usable_password():
             doctor.set_password('doctor123')
             doctor.save(update_fields=['password'])
 
-        _assign_doctor_photo(doctor, spec.get('photo', 'doctor1.jpg'))
+        if not doctor.profile_photo:
+            _assign_doctor_photo(doctor, spec.get('photo', 'doctor1.jpg'))
 
     return User.objects.filter(role='DOCTOR').order_by('id')
 
@@ -166,8 +156,8 @@ def remove_profile_photo(request):
 
 @login_required
 def walkin_booking(request):
-    """Admin books a walk-in patient with cash payment — instant confirm."""
-    if request.user.role != 'ADMIN':
+    """Admin or Receptionist books a walk-in patient with cash payment — instant confirm."""
+    if request.user.role not in ('ADMIN', 'RECEPTIONIST'):
         messages.error(request, "Access denied.")
         return redirect('dashboard')
 
@@ -410,4 +400,153 @@ def patient_detail(request, patient_id):
         'lab_tests': lab_tests,
         'follow_ups': follow_ups,
         'stats': stats,
+    })
+
+
+@login_required
+def edit_patient(request, patient_id):
+    """Admin or Receptionist edits patient demographics and basic details."""
+    if request.user.role not in ('ADMIN', 'RECEPTIONIST'):
+        messages.error(request, "Access denied.")
+        return redirect('dashboard')
+
+    patient = get_object_or_404(User, patient_id=patient_id, role='PATIENT')
+
+    if request.method == 'POST':
+        patient.first_name = request.POST.get('first_name', patient.first_name).strip()
+        patient.last_name = request.POST.get('last_name', patient.last_name).strip()
+        patient.phone = request.POST.get('phone', patient.phone).strip()
+        patient.email = request.POST.get('email', patient.email).strip()
+        patient.gender = request.POST.get('gender') or None
+        patient.date_of_birth = request.POST.get('date_of_birth') or None
+        patient.address = request.POST.get('address', patient.address).strip()
+
+        if request.FILES.get('profile_photo'):
+            patient.profile_photo = request.FILES['profile_photo']
+
+        patient.save()
+        messages.success(request, f"Patient profile updated for {patient.get_full_name()} ({patient.patient_id}).")
+        return redirect('clinic:patient_detail', patient_id=patient.patient_id)
+
+    return render(request, 'clinic/edit_patient.html', {
+        'patient': patient,
+    })
+
+
+@login_required
+def checkin_patient(request, appointment_id):
+    """Receptionist or Admin confirms patient arrival, checks them in, and generates queue token."""
+    if request.user.role not in ('ADMIN', 'RECEPTIONIST'):
+        messages.error(request, "Access denied.")
+        return redirect('dashboard')
+
+    appointment = get_object_or_404(Appointment, id=appointment_id)
+
+    # Confirm appointment status
+    if appointment.status != 'CONFIRMED':
+        appointment.status = 'CONFIRMED'
+        appointment.save()
+
+    # Generate token if not already active
+    token = None
+    if hasattr(appointment, 'queue_token') and appointment.queue_token.is_active:
+        token = appointment.queue_token
+        messages.info(request, f"Patient {appointment.patient.get_full_name()} is already checked in with Token #{token.token_number}.")
+    else:
+        existing_count = QueueToken.objects.filter(
+            appointment__doctor=appointment.doctor,
+            appointment__appointment_date=appointment.appointment_date,
+            is_active=True
+        ).count()
+        token_number = existing_count + 1
+        estimated_wait = estimate_wait_time(appointment.doctor, appointment.appointment_date)
+        token = QueueToken.objects.create(
+            appointment=appointment,
+            token_number=token_number,
+            estimated_wait_minutes=estimated_wait
+        )
+        messages.success(request, f"Checked-in {appointment.patient.get_full_name()}! Queue Token #{token_number} issued for Dr. {appointment.doctor.get_full_name()}.")
+
+    # Notify patient
+    create_notification(
+        recipient=appointment.patient,
+        title="Check-in Confirmed",
+        message=f"You are checked in with Dr. {appointment.doctor.get_full_name()}. Your queue token is #{token.token_number}.",
+        notification_type='QUEUE_UPDATE',
+    )
+
+    next_url = request.GET.get('next') or request.POST.get('next')
+    if next_url:
+        return redirect(next_url)
+    return redirect('dashboard')
+
+
+@login_required
+def mark_noshow(request, appointment_id):
+    """Receptionist or Admin marks patient as absent/no-show."""
+    if request.user.role not in ('ADMIN', 'RECEPTIONIST'):
+        messages.error(request, "Access denied.")
+        return redirect('dashboard')
+
+    appointment = get_object_or_404(Appointment, id=appointment_id)
+    appointment.status = 'CANCELLED'
+    appointment.reason = f"{appointment.reason or ''} [Marked as No-Show by Receptionist]".strip()
+    appointment.save()
+
+    if hasattr(appointment, 'queue_token'):
+        appointment.queue_token.is_active = False
+        appointment.queue_token.save()
+
+    messages.warning(request, f"Appointment for {appointment.patient.get_full_name()} marked as No-Show / Cancelled.")
+    next_url = request.GET.get('next') or request.POST.get('next')
+    if next_url:
+        return redirect(next_url)
+    return redirect('dashboard')
+
+
+@login_required
+def my_patients(request):
+    """Doctor views and searches all patients assigned to or treated by them."""
+    if request.user.role not in ('DOCTOR', 'ADMIN'):
+        messages.error(request, "Access denied.")
+        return redirect('dashboard')
+
+    query = request.GET.get('q', '').strip()
+
+    if request.user.role == 'DOCTOR':
+        # Get patient IDs who have appointments or history with this doctor
+        doctor_patient_ids = set(Appointment.objects.filter(doctor=request.user).values_list('patient_id', flat=True))
+        history_patient_ids = set(PatientHistory.objects.filter(doctor=request.user).values_list('patient_id', flat=True))
+        all_patient_ids = doctor_patient_ids | history_patient_ids
+
+        patients_qs = User.objects.filter(id__in=all_patient_ids, role='PATIENT')
+    else:
+        patients_qs = User.objects.filter(role='PATIENT')
+
+    if query:
+        patients_qs = patients_qs.filter(
+            Q(username__icontains=query) |
+            Q(first_name__icontains=query) |
+            Q(last_name__icontains=query) |
+            Q(patient_id__icontains=query) |
+            Q(phone__icontains=query) |
+            Q(cnic__icontains=query)
+        ).distinct()
+
+    patients_list = []
+    for p in patients_qs.order_by('first_name', 'last_name'):
+        last_appt = Appointment.objects.filter(patient=p, doctor=request.user).order_by('-appointment_date').first() if request.user.role == 'DOCTOR' else Appointment.objects.filter(patient=p).order_by('-appointment_date').first()
+        visit_count = Appointment.objects.filter(patient=p, doctor=request.user, status='COMPLETED').count() if request.user.role == 'DOCTOR' else Appointment.objects.filter(patient=p, status='COMPLETED').count()
+        patients_list.append({
+            'patient': p,
+            'last_visit': last_appt.appointment_date if last_appt else None,
+            'visit_count': visit_count,
+            'age': p.get_age() if hasattr(p, 'get_age') else None,
+            'gender': p.get_gender_display() if hasattr(p, 'get_gender_display') else p.gender,
+        })
+
+    return render(request, 'clinic/my_patients.html', {
+        'patients': patients_list,
+        'query': query,
+        'total_count': len(patients_list),
     })

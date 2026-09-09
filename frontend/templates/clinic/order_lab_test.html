@@ -1,0 +1,129 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block page_title %}Order Lab Test{% endblock %}
+{% block page_subtitle %}Register or assign a lab test to a patient and doctor{% endblock %}
+
+{% block content %}
+<div class="form-container" style="max-width: 680px; margin: 0 auto;">
+    <div class="form-card animate-scale-in">
+        <div class="form-header" style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px;">
+            <div class="icon" style="width: 50px; height: 50px; border-radius: 12px; background: #ecfeff; color: #0891b2; display: flex; align-items: center; justify-content: center; font-size: 1.4rem;">
+                <i class="fas fa-flask-vial"></i>
+            </div>
+            <div>
+                <h2 style="margin: 0 0 4px; font-size: 1.3rem; font-weight: 700;">Order New Lab Test</h2>
+                <p style="margin: 0; color: var(--gray-500); font-size: 0.85rem;">Create a diagnostic test and assign to doctor & patient</p>
+            </div>
+        </div>
+
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                <!-- Select Patient -->
+                <div class="form-group">
+                    <label style="font-weight: 600; font-size: 0.88rem; margin-bottom: 6px; display: block;">Select Patient <span style="color: red;">*</span></label>
+                    <select name="patient_id" class="form-control" required style="width: 100%; padding: 11px 14px; border: 1.5px solid var(--gray-200); border-radius: var(--border-radius); font-size: 0.9rem;">
+                        <option value="">-- Choose Patient --</option>
+                        {% for p in patients %}
+                        <option value="{{ p.id }}">{{ p.patient_id|default:"N/A" }} — {{ p.get_full_name|default:p.username }} ({{ p.phone|default:"No phone" }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Select Doctor -->
+                <div class="form-group">
+                    <label style="font-weight: 600; font-size: 0.88rem; margin-bottom: 6px; display: block;">Assign Doctor <span style="color: var(--gray-400); font-weight: 400;">(Optional)</span></label>
+                    <select name="doctor_id" class="form-control" style="width: 100%; padding: 11px 14px; border: 1.5px solid var(--gray-200); border-radius: var(--border-radius); font-size: 0.9rem;">
+                        <option value="">-- Choose Doctor --</option>
+                        {% for d in doctors %}
+                        <option value="{{ d.id }}">Dr. {{ d.get_full_name|default:d.username }} ({{ d.specialization|default:"Specialist" }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row" style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 16px; margin-bottom: 16px;">
+                <!-- Test Name -->
+                <div class="form-group">
+                    <label style="font-weight: 600; font-size: 0.88rem; margin-bottom: 6px; display: block;">Test Name <span style="color: red;">*</span></label>
+                    <input type="text" name="test_name" class="form-control" placeholder="e.g., CBC, Blood Sugar, Chest X-Ray" required style="width: 100%; padding: 11px 14px; border: 1.5px solid var(--gray-200); border-radius: var(--border-radius); font-size: 0.9rem;">
+                </div>
+
+                <!-- Category -->
+                <div class="form-group">
+                    <label style="font-weight: 600; font-size: 0.88rem; margin-bottom: 6px; display: block;">Category</label>
+                    <input type="text" name="test_category" class="form-control" placeholder="e.g. Hematology, Radiology" style="width: 100%; padding: 11px 14px; border: 1.5px solid var(--gray-200); border-radius: var(--border-radius); font-size: 0.9rem;">
+                </div>
+            </div>
+
+            <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                <!-- Cost -->
+                <div class="form-group">
+                    <label style="font-weight: 600; font-size: 0.88rem; margin-bottom: 6px; display: block;">Test Cost (PKR)</label>
+                    <input type="number" name="cost" class="form-control" value="0.00" step="0.01" style="width: 100%; padding: 11px 14px; border: 1.5px solid var(--gray-200); border-radius: var(--border-radius); font-size: 0.9rem;">
+                </div>
+
+                <!-- Status -->
+                <div class="form-group">
+                    <label style="font-weight: 600; font-size: 0.88rem; margin-bottom: 6px; display: block;">Initial Status</label>
+                    <select name="status" class="form-control" style="width: 100%; padding: 11px 14px; border: 1.5px solid var(--gray-200); border-radius: var(--border-radius); font-size: 0.9rem;">
+                        {% for val, lbl in status_choices %}
+                        <option value="{{ val }}">{{ lbl }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <!-- Upload PDF/Image Report File -->
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label style="font-weight: 600; font-size: 0.88rem; margin-bottom: 6px; display: block;">Upload Report File (PDF / Image)</label>
+                <div class="file-upload-zone" onclick="document.getElementById('new-report-file').click()" style="border: 2px dashed #cbd5e1; border-radius: 12px; padding: 20px; text-align: center; cursor: pointer; background: #f8fafc;">
+                    <div class="upload-icon" style="font-size: 1.8rem; color: #0d9488; margin-bottom: 6px;"><i class="fas fa-cloud-arrow-up"></i></div>
+                    <div class="upload-text" style="font-weight: 600; font-size: 0.9rem; color: #334155;">Click to choose PDF or Image report</div>
+                    <div class="upload-hint" style="font-size: 0.78rem; color: #94a3b8; margin-top: 4px;">PDF, JPG, PNG up to 10MB</div>
+                </div>
+                <input type="file" name="report_file" id="new-report-file" style="display: none;" accept=".pdf,.jpg,.jpeg,.png">
+            </div>
+
+            <!-- Results / Findings -->
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label style="font-weight: 600; font-size: 0.88rem; margin-bottom: 6px; display: block;">Results / Findings Summary</label>
+                <textarea name="results" class="form-control" rows="3" placeholder="Enter findings, normal/abnormal readings, or doctor remarks..." style="width: 100%; padding: 11px 14px; border: 1.5px solid var(--gray-200); border-radius: var(--border-radius); font-size: 0.9rem; resize: vertical;"></textarea>
+            </div>
+
+            <!-- Notes -->
+            <div class="form-group" style="margin-bottom: 24px;">
+                <label style="font-weight: 600; font-size: 0.88rem; margin-bottom: 6px; display: block;">Internal Clinic Notes</label>
+                <textarea name="notes" class="form-control" rows="2" placeholder="e.g. Sample processed at main lab, urgent review required" style="width: 100%; padding: 11px 14px; border: 1.5px solid var(--gray-200); border-radius: var(--border-radius); font-size: 0.9rem; resize: vertical;"></textarea>
+            </div>
+
+            <div class="form-actions" style="display: flex; gap: 12px;">
+                <a href="{% url 'clinic:lab_tests' %}" class="btn-secondary" style="flex: 1; justify-content: center; text-decoration: none;">
+                    <i class="fas fa-arrow-left"></i> Cancel
+                </a>
+                <button type="submit" class="btn-primary" style="flex: 2; justify-content: center; padding: 12px;">
+                    <i class="fas fa-check-circle"></i> Save & Order Lab Test
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    var fileInput = document.getElementById('new-report-file');
+    var dropzone = document.querySelector('.file-upload-zone');
+    if (fileInput && dropzone) {
+        fileInput.addEventListener('change', function(e) {
+            var file = e.target.files[0];
+            if (file) {
+                dropzone.querySelector('.upload-text').textContent = file.name;
+                dropzone.querySelector('.upload-hint').textContent = (file.size / 1024).toFixed(0) + ' KB ready to upload';
+                dropzone.style.borderColor = 'var(--primary-500)';
+                dropzone.style.background = '#f0fdfa';
+            }
+        });
+    }
+</script>
+{% endblock %}

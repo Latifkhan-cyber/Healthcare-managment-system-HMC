@@ -1,9 +1,9 @@
 {% extends 'base/base.html' %}
-{% block page_title %}Payment Management{% endblock %}
-{% block page_subtitle %}Verify and track all payments{% endblock %}
+{% block page_title %}Payment Management & Online Verifications{% endblock %}
+{% block page_subtitle %}Verify online transactions, confirm cash arrivals, and track all clinic invoices{% endblock %}
 
 {% block content %}
-<!-- Stats -->
+<!-- ═══ STATS OVERVIEW ═══ -->
 <div class="stats-grid">
     <div class="stat-card animate-fade-in-up delay-100">
         <div class="stat-icon green"><i class="fas fa-coins"></i></div>
@@ -16,141 +16,230 @@
         <div class="stat-icon blue"><i class="fas fa-check-double"></i></div>
         <div class="stat-info">
             <div class="stat-value">{{ paid_count }}</div>
-            <div class="stat-label">Paid</div>
+            <div class="stat-label">Paid / Verified</div>
         </div>
     </div>
-    <div class="stat-card animate-fade-in-up delay-300">
-        <div class="stat-icon orange"><i class="fas fa-hourglass-half"></i></div>
+    <div class="stat-card animate-fade-in-up delay-300" style="{% if pending_online_count > 0 %}border: 2px solid #ef4444;{% endif %}">
+        <div class="stat-icon orange"><i class="fas fa-mobile-screen"></i></div>
         <div class="stat-info">
-            <div class="stat-value">{{ pending_count }}</div>
-            <div class="stat-label">Pending</div>
+            <div class="stat-value">{{ pending_online_count }}</div>
+            <div class="stat-label">Pending Online Verification</div>
         </div>
     </div>
     <div class="stat-card animate-fade-in-up delay-400">
-        <div class="stat-icon red"><i class="fas fa-times-circle"></i></div>
+        <div class="stat-icon cyan"><i class="fas fa-hand-holding-dollar"></i></div>
         <div class="stat-info">
-            <div class="stat-value">{{ failed_count }}</div>
-            <div class="stat-label">Rejected</div>
+            <div class="stat-value">{{ pending_cash_count }}</div>
+            <div class="stat-label">Pending Cash on Arrival</div>
         </div>
     </div>
     <div class="stat-card animate-fade-in-up delay-500">
-        <div class="stat-icon purple"><i class="fas fa-undo"></i></div>
+        <div class="stat-icon red"><i class="fas fa-times-circle"></i></div>
         <div class="stat-info">
-            <div class="stat-value">{{ refunded_count|default:0 }}</div>
-            <div class="stat-label">Refunded</div>
+            <div class="stat-value">{{ failed_count }}</div>
+            <div class="stat-label">Rejected / Failed</div>
         </div>
     </div>
 </div>
 
-<!-- Payments Table -->
-<div class="data-card animate-fade-in-up delay-200">
-    <div class="data-card-header">
-        <h3>All Payments</h3>
+<!-- ═══ CONTROLS & FILTER TABS ═══ -->
+<div style="margin: 20px 0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+    <!-- Filter Tabs -->
+    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <a href="?filter=all" class="btn-sm {% if active_filter == 'all' %}btn-primary{% else %}btn-secondary{% endif %}" style="text-decoration: none; border-radius: 999px; font-weight: 700;">
+            All Payments
+        </a>
+        <a href="?filter=online_pending" class="btn-sm {% if active_filter == 'online_pending' %}btn-primary{% else %}btn-secondary{% endif %}" style="text-decoration: none; border-radius: 999px; font-weight: 700; position: relative;">
+            <i class="fas fa-mobile-screen"></i> Online Verifications
+            {% if pending_online_count > 0 %}
+                <span style="background: #ef4444; color: white; border-radius: 999px; padding: 1px 6px; font-size: 0.7rem; margin-left: 4px;">{{ pending_online_count }}</span>
+            {% endif %}
+        </a>
+        <a href="?filter=cash_pending" class="btn-sm {% if active_filter == 'cash_pending' %}btn-primary{% else %}btn-secondary{% endif %}" style="text-decoration: none; border-radius: 999px; font-weight: 700;">
+            <i class="fas fa-money-bill-wave"></i> Cash on Arrival ({{ pending_cash_count }})
+        </a>
+        <a href="?filter=paid" class="btn-sm {% if active_filter == 'paid' %}btn-primary{% else %}btn-secondary{% endif %}" style="text-decoration: none; border-radius: 999px; font-weight: 700;">
+            <i class="fas fa-check"></i> Paid ({{ paid_count }})
+        </a>
+        <a href="?filter=failed" class="btn-sm {% if active_filter == 'failed' %}btn-primary{% else %}btn-secondary{% endif %}" style="text-decoration: none; border-radius: 999px; font-weight: 700;">
+            <i class="fas fa-times"></i> Rejected ({{ failed_count }})
+        </a>
     </div>
+
+    <!-- Search Form -->
+    <form method="get" action="" style="display: flex; gap: 6px; align-items: center;">
+        <input type="hidden" name="filter" value="{{ active_filter }}">
+        <div style="position: relative;">
+            <input type="text" name="q" value="{{ search_query }}" placeholder="Search by Patient, ID, TID..." class="form-control" style="padding-left: 32px; height: 38px; width: 260px; font-size: 0.85rem; border-radius: 8px;">
+            <i class="fas fa-search" style="position: absolute; left: 10px; top: 12px; color: var(--gray-400); font-size: 0.8rem;"></i>
+        </div>
+        <button type="submit" class="btn-primary btn-sm" style="height: 38px;">Filter</button>
+        {% if search_query %}
+            <a href="?filter={{ active_filter }}" class="btn-secondary btn-sm" style="height: 38px; display: flex; align-items: center;">Clear</a>
+        {% endif %}
+    </form>
+</div>
+
+<!-- ═══ PAYMENTS TABLE ═══ -->
+<div class="data-card animate-fade-in-up delay-200">
+    <div class="data-card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h3 style="margin: 0;">Payment Transactions</h3>
+            <div style="font-size: 0.8rem; color: var(--gray-500);">Showing {{ payments|length }} record{{ payments|length|pluralize }}</div>
+        </div>
+        {% if user.role == 'ADMIN' %}
+        <a href="{% url 'clinic:payment_settings' %}" class="btn-ghost btn-sm" style="text-decoration: none;">
+            <i class="fas fa-gear"></i> Payment Gateway Settings
+        </a>
+        {% endif %}
+    </div>
+
     <div class="table-responsive">
         <table>
             <thead>
-                <tr>
-                    <th>Patient</th>
-                    <th>Doctor</th>
+                <tr style="background: #f8fafc;">
+                    <th>Patient Details</th>
+                    <th>Doctor & Appointment</th>
                     <th>Amount</th>
-                    <th>Method</th>
+                    <th>Payment Method</th>
+                    <th>Transaction ID</th>
+                    <th>Proof Slip</th>
                     <th>Status</th>
-                    <th>Proof</th>
-                    <th>Actions</th>
+                    <th>Actions & Confirmations</th>
                 </tr>
             </thead>
             <tbody>
                 {% for payment in payments %}
-                <tr>
+                <tr style="transition: background 0.2s;">
+                    <!-- Patient -->
                     <td>
                         <div style="display: flex; align-items: center; gap: 10px;">
-                            <div style="width: 32px; height: 32px; border-radius: 8px; background: var(--info-bg); color: var(--info); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 700;">
+                            <div style="width: 34px; height: 34px; border-radius: 8px; background: var(--primary-50); color: var(--primary-700); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 800;">
                                 {{ payment.appointment.patient.username|slice:":1"|upper }}
                             </div>
-                            <span style="font-weight: 600;">{{ payment.appointment.patient.get_full_name|default:payment.appointment.patient.username }}</span>
+                            <div>
+                                <div style="font-weight: 700; color: var(--gray-900);">
+                                    {{ payment.appointment.patient.get_full_name|default:payment.appointment.patient.username }}
+                                </div>
+                                <div style="font-size: 0.74rem; color: var(--gray-500);">
+                                    ID: {{ payment.appointment.patient.patient_id|default:"N/A" }} &bull; {{ payment.appointment.patient.phone|default:"No phone" }}
+                                </div>
+                            </div>
                         </div>
                     </td>
-                    <td>Dr. {{ payment.appointment.doctor.get_full_name|default:payment.appointment.doctor.username }}</td>
-                    <td style="font-weight: 700;">PKR {{ payment.amount }}</td>
+
+                    <!-- Doctor & Appointment -->
+                    <td>
+                        <div style="font-weight: 600; color: var(--gray-800);">Dr. {{ payment.appointment.doctor.get_full_name|default:payment.appointment.doctor.username }}</div>
+                        <div style="font-size: 0.75rem; color: var(--gray-500);">
+                            <i class="far fa-calendar-alt"></i> {{ payment.appointment.appointment_date|date:"M d, Y" }} ({{ payment.appointment.time_slot }})
+                        </div>
+                    </td>
+
+                    <!-- Amount -->
+                    <td>
+                        <span style="font-weight: 800; font-size: 0.95rem; color: var(--success-text);">PKR {{ payment.amount }}</span>
+                    </td>
+
+                    <!-- Method -->
                     <td>
                         {% if payment.method == 'CASH' %}
-                            <i class="fas fa-money-bill-wave" style="color: var(--success); margin-right: 4px;"></i>
-                            Cash (Walk-in)
-                            <div style="font-size: 0.75rem; color: var(--gray-500); margin-top: 4px;">Confirmed instantly at reception</div>
+                            <span class="badge" style="background: #ecfdf5; color: #065f46; font-weight: 700; font-size: 0.76rem; padding: 4px 8px; border-radius: 6px;">
+                                <i class="fas fa-money-bill-wave"></i> Cash on Arrival
+                            </span>
                         {% elif payment.method == 'JAZZCASH' %}
-                            <i class="fas fa-mobile-alt" style="color: #d93025; margin-right: 4px;"></i>
-                            JazzCash (Online)
-                            <div style="font-size: 0.75rem; color: var(--gray-500); margin-top: 4px;">
-                                {% if payment.status == 'PAID' %}Verified by admin.{% else %}Pending admin verification.{% endif %}
-                            </div>
+                            <span class="badge" style="background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; font-weight: 700; font-size: 0.76rem; padding: 4px 8px; border-radius: 6px;">
+                                <i class="fas fa-mobile-screen"></i> JazzCash
+                            </span>
                         {% elif payment.method == 'EASYPAISA' %}
-                            <i class="fas fa-mobile-alt" style="color: var(--success); margin-right: 4px;"></i>
-                            EasyPaisa (Online)
-                            <div style="font-size: 0.75rem; color: var(--gray-500); margin-top: 4px;">
-                                {% if payment.status == 'PAID' %}Verified by admin.{% else %}Pending admin verification.{% endif %}
-                            </div>
+                            <span class="badge" style="background: #ecfdf5; color: #059669; border: 1px solid #6ee7b7; font-weight: 700; font-size: 0.76rem; padding: 4px 8px; border-radius: 6px;">
+                                <i class="fas fa-mobile-screen"></i> EasyPaisa
+                            </span>
+                        {% elif payment.method == 'BANK' %}
+                            <span class="badge" style="background: #eff6ff; color: #2563eb; border: 1px solid #93c5fd; font-weight: 700; font-size: 0.76rem; padding: 4px 8px; border-radius: 6px;">
+                                <i class="fas fa-building-columns"></i> Bank Transfer
+                            </span>
                         {% else %}
-                            <i class="fas fa-university" style="color: var(--info); margin-right: 4px;"></i>
-                            Bank (Online)
-                            <div style="font-size: 0.75rem; color: var(--gray-500); margin-top: 4px;">
-                                {% if payment.status == 'PAID' %}Verified by admin.{% else %}Pending admin verification.{% endif %}
-                            </div>
+                            <span class="badge" style="background: var(--gray-100); color: var(--gray-700); font-weight: 700; font-size: 0.76rem;">
+                                {{ payment.get_method_display }}
+                            </span>
                         {% endif %}
                     </td>
-                    <td><span class="status-badge status-{{ payment.status|lower }}">{{ payment.get_status_display }}</span></td>
+
+                    <!-- Transaction ID -->
+                    <td>
+                        {% if payment.transaction_id %}
+                            <div style="display: flex; align-items: center; gap: 4px;">
+                                <code style="background: #f1f5f9; padding: 3px 6px; border-radius: 4px; font-weight: 800; font-size: 0.8rem; color: #0f172a;">{{ payment.transaction_id }}</code>
+                                <button type="button" onclick="navigator.clipboard.writeText('{{ payment.transaction_id }}'); alert('TID copied: {{ payment.transaction_id }}');" class="btn-icon" title="Copy TID" style="font-size: 0.7rem; width: 22px; height: 22px;">
+                                    <i class="far fa-copy"></i>
+                                </button>
+                            </div>
+                        {% else %}
+                            <span style="color: var(--gray-400); font-size: 0.78rem;">—</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Proof Slip -->
                     <td>
                         {% if payment.payment_proof %}
-                            <a href="{{ payment.payment_proof.url }}" target="_blank" class="btn-icon" title="View Proof">
-                                <i class="fas fa-image"></i>
-                            </a>
+                            <button type="button" onclick="openProofModal('{{ payment.payment_proof.url }}', '{{ payment.appointment.patient.get_full_name|escapejs }}', 'PKR {{ payment.amount }}', '{{ payment.get_method_display|escapejs }}', '{{ payment.transaction_id|default:"N/A"|escapejs }}')" class="btn-secondary btn-sm" style="padding: 3px 8px; font-size: 0.75rem; display: flex; align-items: center; gap: 4px;">
+                                <i class="fas fa-image" style="color: #3b82f6;"></i> View Slip
+                            </button>
                         {% else %}
-                            <span style="color: var(--gray-400); font-size: 0.8rem;">No proof</span>
+                            <span style="color: var(--gray-400); font-size: 0.75rem;">No slip</span>
                         {% endif %}
                     </td>
+
+                    <!-- Status -->
+                    <td>
+                        <span class="status-badge status-{{ payment.status|lower }}">{{ payment.get_status_display }}</span>
+                    </td>
+
+                    <!-- Actions -->
                     <td>
                         {% if payment.status == 'PENDING' %}
                             <div style="display: flex; gap: 6px; flex-wrap: wrap;">
                                 {% if payment.method == 'CASH' %}
-                                    <a href="{% url 'clinic:confirm_cash_payment' payment.id %}" class="btn-icon success" title="Confirm Cash Received">
-                                        <i class="fas fa-hand-holding-dollar"></i>
+                                    <a href="{% url 'clinic:confirm_cash_payment' payment.id %}?next={{ request.get_full_path }}" onclick="return confirm('Confirm cash payment of PKR {{ payment.amount }}?')" class="btn-primary btn-sm" style="background: #16a34a; border-color: #16a34a; text-decoration: none; padding: 4px 10px; font-size: 0.75rem; font-weight: 700;">
+                                        <i class="fas fa-hand-holding-dollar"></i> Confirm Cash
                                     </a>
                                 {% else %}
-                                    <a href="{% url 'clinic:verify_payment' payment.id %}" class="btn-icon success" title="Verify Payment">
-                                        <i class="fas fa-check"></i>
+                                    <a href="{% url 'clinic:verify_payment' payment.id %}?next={{ request.get_full_path }}" onclick="return confirm('Verify and confirm online payment of PKR {{ payment.amount }}?')" class="btn-primary btn-sm" style="background: #16a34a; border-color: #16a34a; text-decoration: none; padding: 4px 10px; font-size: 0.75rem; font-weight: 700;">
+                                        <i class="fas fa-check"></i> Verify Online
                                     </a>
                                 {% endif %}
-                                <a href="{% url 'clinic:reject_payment' payment.id %}" class="btn-icon danger" title="Reject">
-                                    <i class="fas fa-times"></i>
-                                </a>
+                                <button type="button" onclick="openRejectModal('{% url 'clinic:reject_payment' payment.id %}?next={{ request.get_full_path }}', '{{ payment.appointment.patient.get_full_name|escapejs }}', 'PKR {{ payment.amount }}')" class="btn-secondary btn-sm" style="color: #dc2626; border-color: #fca5a5; padding: 4px 8px; font-size: 0.75rem;">
+                                    <i class="fas fa-times"></i> Reject
+                                </button>
                             </div>
                         {% elif payment.status == 'PAID' %}
-                            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-                                {% if payment.method != 'CASH' %}
-                                <a href="{% url 'clinic:payment_receipt' payment.id %}" class="btn-ghost btn-sm" title="Download Receipt">
-                                    <i class="fas fa-download"></i> Receipt
+                            <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
+                                <a href="{% url 'clinic:payment_receipt' payment.id %}" target="_blank" class="btn-secondary btn-sm" style="text-decoration: none; padding: 4px 8px; font-size: 0.75rem;">
+                                    <i class="fas fa-print"></i> Invoice PDF
                                 </a>
-                                {% endif %}
-                                <a href="{% url 'clinic:process_refund' payment.id %}" class="btn-ghost btn-sm" style="color: var(--danger);" title="Process Refund">
+                                <a href="{% url 'clinic:process_refund' payment.id %}" class="btn-ghost btn-sm" style="color: var(--danger); font-size: 0.75rem;" title="Process Refund">
                                     <i class="fas fa-undo"></i> Refund
                                 </a>
                             </div>
-                        {% elif payment.status == 'REFUNDED' and payment.method != 'CASH' %}
-                            <a href="{% url 'clinic:payment_receipt' payment.id %}" class="btn-ghost btn-sm" title="Download Receipt">
+                        {% elif payment.status == 'REFUNDED' %}
+                            <a href="{% url 'clinic:payment_receipt' payment.id %}" target="_blank" class="btn-ghost btn-sm" style="font-size: 0.75rem;">
                                 <i class="fas fa-download"></i> Receipt
                             </a>
                         {% else %}
-                            <span style="color: var(--gray-400); font-size: 0.75rem;">—</span>
+                            <span style="color: var(--gray-400); font-size: 0.75rem;">Rejected / Failed</span>
                         {% endif %}
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="7">
-                        <div class="empty-state">
-                            <div class="empty-icon"><i class="fas fa-file-invoice-dollar"></i></div>
-                            <h4>No payment records</h4>
-                            <p>Payments will appear here once patients start booking</p>
+                    <td colspan="8">
+                        <div class="empty-state" style="padding: 40px 20px; text-align: center;">
+                            <div class="empty-icon" style="font-size: 2.2rem; color: var(--gray-400); margin-bottom: 8px;">
+                                <i class="fas fa-file-invoice-dollar"></i>
+                            </div>
+                            <h4 style="margin: 0 0 4px; color: var(--gray-800);">No payment records found</h4>
+                            <p style="margin: 0; color: var(--gray-500); font-size: 0.85rem;">Try selecting a different filter tab or search query.</p>
                         </div>
                     </td>
                 </tr>
@@ -161,31 +250,121 @@
 
     <!-- Pagination -->
     {% if page_obj.has_other_pages %}
-    <div class="pagination">
+    <div class="pagination" style="display: flex; justify-content: center; gap: 6px; padding: 16px;">
         {% if page_obj.has_previous %}
-            <a href="?page=1">&laquo; First</a>
-            <a href="?page={{ page_obj.previous_page_number }}">&lsaquo; Prev</a>
-        {% else %}
-            <span class="disabled">&laquo; First</span>
-            <span class="disabled">&lsaquo; Prev</span>
+            <a href="?page=1&filter={{ active_filter }}&q={{ search_query }}" class="btn-secondary btn-sm">&laquo; First</a>
+            <a href="?page={{ page_obj.previous_page_number }}&filter={{ active_filter }}&q={{ search_query }}" class="btn-secondary btn-sm">&lsaquo; Prev</a>
         {% endif %}
 
-        {% for num in page_obj.paginator.page_range %}
-            {% if page_obj.number == num %}
-                <span class="current">{{ num }}</span>
-            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                <a href="?page={{ num }}">{{ num }}</a>
-            {% endif %}
-        {% endfor %}
+        <span class="btn-primary btn-sm" style="pointer-events: none;">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
 
         {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}">Next &rsaquo;</a>
-            <a href="?page={{ page_obj.paginator.num_pages }}">Last &raquo;</a>
-        {% else %}
-            <span class="disabled">Next &rsaquo;</span>
-            <span class="disabled">Last &raquo;</span>
+            <a href="?page={{ page_obj.next_page_number }}&filter={{ active_filter }}&q={{ search_query }}" class="btn-secondary btn-sm">Next &rsaquo;</a>
+            <a href="?page={{ page_obj.paginator.num_pages }}&filter={{ active_filter }}&q={{ search_query }}" class="btn-secondary btn-sm">Last &raquo;</a>
         {% endif %}
     </div>
     {% endif %}
 </div>
+
+<!-- ═══ PAYMENT PROOF PREVIEW MODAL ═══ -->
+<div id="proofModal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.75); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(4px); padding: 20px;">
+    <div style="background: white; border-radius: 16px; width: 100%; max-width: 550px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);">
+        <div style="padding: 16px 20px; background: #f8fafc; border-bottom: 1px solid var(--gray-200); display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-weight: 800; font-size: 1.05rem; color: var(--gray-900);">
+                <i class="fas fa-file-invoice" style="color: var(--primary-600); margin-right: 6px;"></i> Payment Slip Proof
+            </div>
+            <button type="button" onclick="closeProofModal()" style="background: none; border: none; font-size: 1.25rem; cursor: pointer; color: var(--gray-400);">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div style="padding: 20px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; background: #f1f5f9; padding: 12px; border-radius: 10px; font-size: 0.85rem;">
+                <div><span style="color: var(--gray-500);">Patient:</span> <strong id="modalPatient"></strong></div>
+                <div><span style="color: var(--gray-500);">Amount:</span> <strong id="modalAmount" style="color: var(--success-text);"></strong></div>
+                <div><span style="color: var(--gray-500);">Channel:</span> <strong id="modalChannel"></strong></div>
+                <div><span style="color: var(--gray-500);">TID:</span> <code id="modalTid" style="font-weight: 800; color: #1e3a8a;"></code></div>
+            </div>
+            <div style="text-align: center; max-height: 380px; overflow-y: auto; border: 1px dashed var(--gray-300); border-radius: 10px; padding: 10px; background: #fafafa;">
+                <img id="modalProofImg" src="" alt="Payment Proof" style="max-width: 100%; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);" />
+            </div>
+        </div>
+        <div style="padding: 12px 20px; background: #f8fafc; border-top: 1px solid var(--gray-200); display: flex; justify-content: flex-end; gap: 10px;">
+            <a id="modalOpenFullBtn" href="" target="_blank" class="btn-secondary btn-sm" style="text-decoration: none;">
+                <i class="fas fa-arrow-up-right-from-square"></i> Open Full Image
+            </a>
+            <button type="button" onclick="closeProofModal()" class="btn-primary btn-sm">
+                Close
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ REJECT PAYMENT MODAL ═══ -->
+<div id="rejectModal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.75); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(4px); padding: 20px;">
+    <div style="background: white; border-radius: 16px; width: 100%; max-width: 480px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);">
+        <form id="rejectForm" method="post" action="">
+            {% csrf_token %}
+            <div style="padding: 16px 20px; background: #fef2f2; border-bottom: 1px solid #fee2e2; display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-weight: 800; font-size: 1.05rem; color: #991b1b;">
+                    <i class="fas fa-exclamation-triangle" style="margin-right: 6px;"></i> Reject Payment
+                </div>
+                <button type="button" onclick="closeRejectModal()" style="background: none; border: none; font-size: 1.25rem; cursor: pointer; color: var(--gray-400);">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div style="padding: 20px;">
+                <p style="margin: 0 0 14px; font-size: 0.9rem; color: var(--gray-700);">
+                    Are you sure you want to reject payment of <strong id="rejectModalAmount"></strong> for <strong id="rejectModalPatient"></strong>?
+                </p>
+                <div style="margin-bottom: 12px;">
+                    <label style="display: block; font-size: 0.8rem; font-weight: 700; color: var(--gray-700); margin-bottom: 6px;">
+                        Reason for rejection (sent to patient):
+                    </label>
+                    <select name="reason" class="form-control" style="width: 100%; margin-bottom: 8px;">
+                        <option value="Invalid transaction ID / Reference number">Invalid transaction ID / Reference number</option>
+                        <option value="Incorrect amount paid / Fee discrepancy">Incorrect amount paid / Fee discrepancy</option>
+                        <option value="Payment proof unreadable / blurry screenshot">Payment proof unreadable / blurry screenshot</option>
+                        <option value="Payment not received in clinic merchant account">Payment not received in clinic merchant account</option>
+                        <option value="Duplicate submission / Fake receipt">Duplicate submission / Fake receipt</option>
+                    </select>
+                </div>
+            </div>
+            <div style="padding: 12px 20px; background: #f8fafc; border-top: 1px solid var(--gray-200); display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" onclick="closeRejectModal()" class="btn-secondary btn-sm">Cancel</button>
+                <button type="submit" class="btn-primary btn-sm" style="background: #dc2626; border-color: #dc2626;">
+                    <i class="fas fa-times"></i> Confirm Rejection
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openProofModal(imgUrl, patientName, amount, channel, tid) {
+    document.getElementById('modalProofImg').src = imgUrl;
+    document.getElementById('modalOpenFullBtn').href = imgUrl;
+    document.getElementById('modalPatient').innerText = patientName;
+    document.getElementById('modalAmount').innerText = amount;
+    document.getElementById('modalChannel').innerText = channel;
+    document.getElementById('modalTid').innerText = tid;
+    var modal = document.getElementById('proofModal');
+    modal.style.display = 'flex';
+}
+
+function closeProofModal() {
+    document.getElementById('proofModal').style.display = 'none';
+}
+
+function openRejectModal(actionUrl, patientName, amount) {
+    document.getElementById('rejectForm').action = actionUrl;
+    document.getElementById('rejectModalPatient').innerText = patientName;
+    document.getElementById('rejectModalAmount').innerText = amount;
+    var modal = document.getElementById('rejectModal');
+    modal.style.display = 'flex';
+}
+
+function closeRejectModal() {
+    document.getElementById('rejectModal').style.display = 'none';
+}
+</script>
 {% endblock %}

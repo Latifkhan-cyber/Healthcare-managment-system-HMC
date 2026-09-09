@@ -30,9 +30,21 @@
                 {% endif %}
             </div>
         </div>
-        <div style="text-align: right;">
-            <div style="font-size: 0.7rem; color: var(--gray-400); text-transform: uppercase;">Registered</div>
-            <div style="font-weight: 600; font-size: 0.85rem;">{{ p.date_joined|date:"M d, Y" }}</div>
+        <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
+            <div>
+                <div style="font-size: 0.7rem; color: var(--gray-400); text-transform: uppercase;">Registered</div>
+                <div style="font-weight: 600; font-size: 0.85rem;">{{ p.date_joined|date:"M d, Y" }}</div>
+            </div>
+            {% if user.role == 'ADMIN' or user.role == 'RECEPTIONIST' %}
+            <div style="display: flex; gap: 8px;">
+                <a href="{% url 'clinic:edit_patient' p.patient_id %}" class="btn-secondary btn-sm" style="text-decoration: none;">
+                    <i class="fas fa-edit"></i> Edit Details
+                </a>
+                <a href="{% url 'clinic:walkin_booking' %}?patient_id={{ p.id }}" class="btn-primary btn-sm" style="text-decoration: none;">
+                    <i class="fas fa-calendar-plus"></i> Book Visit
+                </a>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>

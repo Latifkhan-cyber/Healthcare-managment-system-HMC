@@ -167,31 +167,63 @@ def call_next(request):
 
 
 @login_required
-def serve_patient(request, token_id):
-    """Doctor marks patient as seen — admin will record details later."""
-    if request.user.role != 'DOCTOR':
+def skip_patient(request, token_id):
+    """Doctor or Receptionist skips current patient and moves them behind the next waiting patient."""
+    if request.user.role not in ('DOCTOR', 'ADMIN', 'RECEPTIONIST'):
+        messages.error(request, "Access denied.")
         return redirect('dashboard')
-    token = get_object_or_404(
-        QueueToken, id=token_id,
-        appointment__doctor=request.user
-    )
-    appointment = token.appointment
 
-    if request.method == 'POST':
-        # Doctor just marks as seen — no medical data entry
-        appointment.status = 'COMPLETED'
-        appointment.save()
-        token.is_active = False
+    token = get_object_or_404(QueueToken, id=token_id)
+    if request.user.role == 'DOCTOR' and token.appointment.doctor != request.user:
+        messages.error(request, "Access denied.")
+        return redirect('dashboard')
+
+    # Find next active token for this doctor
+    next_tokens = QueueToken.objects.filter(
+        appointment__doctor=token.appointment.doctor,
+        appointment__appointment_date=token.appointment.appointment_date,
+        is_active=True,
+        token_number__gt=token.token_number
+    ).order_by('token_number')
+
+    if next_tokens.exists():
+        next_tok = next_tokens.first()
+        # Swap token numbers safely
+        cur_num = token.token_number
+        next_num = next_tok.token_number
+
+        token.token_number = 999998
         token.save()
 
-        messages.success(
-            request,
-            f"Patient {appointment.patient.get_full_name()} marked as seen. Admin will record consultation details."
-        )
-        return redirect('clinic:manage_queue')
+        next_tok.token_number = cur_num
+        next_tok.save()
 
-    # Show patient info for doctor to review before marking
-    return render(request, 'clinic/serve_patient.html', {
-        'appointment': appointment,
-        'token': token,
-    })
+        token.token_number = next_num
+        token.save()
+
+        messages.info(request, f"Patient {token.appointment.patient.get_full_name()} skipped to Token #{next_num}. Next patient called.")
+    else:
+        messages.info(request, f"Patient {token.appointment.patient.get_full_name()} is the only patient in queue.")
+
+    next_url = request.GET.get('next')
+    if next_url:
+        return redirect(next_url)
+    return redirect('clinic:manage_queue')
+
+
+@login_required
+def serve_patient(request, token_id):
+    """Doctor consultation entry point."""
+    if request.user.role not in ('DOCTOR', 'ADMIN'):
+        return redirect('dashboard')
+    token = get_object_or_404(
+        QueueToken, id=token_id
+    )
+    if request.user.role == 'DOCTOR' and token.appointment.doctor != request.user:
+        messages.error(request, "Access denied.")
+        return redirect('dashboard')
+
+    appointment = token.appointment
+
+    # Redirect directly to comprehensive consultation & prescription view
+    return redirect('clinic:record_consultation', appointment_id=appointment.id)

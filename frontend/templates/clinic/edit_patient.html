@@ -1,0 +1,77 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block page_title %}Edit Patient Profile{% endblock %}
+{% block page_subtitle %}{{ patient.patient_id }} — {{ patient.get_full_name|default:patient.username }}{% endblock %}
+
+{% block content %}
+<div class="form-container" style="max-width: 640px; margin: 0 auto;">
+    <div class="form-card animate-scale-in">
+        <div class="form-header" style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px;">
+            <div class="icon" style="width: 50px; height: 50px; border-radius: 12px; background: #eff6ff; color: #2563eb; display: flex; align-items: center; justify-content: center; font-size: 1.4rem;">
+                <i class="fas fa-user-pen"></i>
+            </div>
+            <div>
+                <h2 style="margin: 0 0 4px; font-size: 1.3rem; font-weight: 700;">Edit Patient Information</h2>
+                <p style="margin: 0; color: var(--gray-500); font-size: 0.85rem;">Patient ID: <strong>{{ patient.patient_id|default:"N/A" }}</strong></p>
+            </div>
+        </div>
+
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                <div class="form-group">
+                    <label style="font-weight: 600; font-size: 0.88rem; margin-bottom: 6px; display: block;">First Name <span style="color: red;">*</span></label>
+                    <input type="text" name="first_name" value="{{ patient.first_name }}" class="form-control" required style="width: 100%; padding: 11px 14px; border: 1.5px solid var(--gray-200); border-radius: var(--border-radius); font-size: 0.9rem;">
+                </div>
+                <div class="form-group">
+                    <label style="font-weight: 600; font-size: 0.88rem; margin-bottom: 6px; display: block;">Last Name <span style="color: red;">*</span></label>
+                    <input type="text" name="last_name" value="{{ patient.last_name }}" class="form-control" required style="width: 100%; padding: 11px 14px; border: 1.5px solid var(--gray-200); border-radius: var(--border-radius); font-size: 0.9rem;">
+                </div>
+            </div>
+
+            <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                <div class="form-group">
+                    <label style="font-weight: 600; font-size: 0.88rem; margin-bottom: 6px; display: block;">Phone Number</label>
+                    <input type="text" name="phone" value="{{ patient.phone|default:'' }}" class="form-control" placeholder="03001234567" style="width: 100%; padding: 11px 14px; border: 1.5px solid var(--gray-200); border-radius: var(--border-radius); font-size: 0.9rem;">
+                </div>
+                <div class="form-group">
+                    <label style="font-weight: 600; font-size: 0.88rem; margin-bottom: 6px; display: block;">Email Address</label>
+                    <input type="email" name="email" value="{{ patient.email|default:'' }}" class="form-control" placeholder="patient@example.com" style="width: 100%; padding: 11px 14px; border: 1.5px solid var(--gray-200); border-radius: var(--border-radius); font-size: 0.9rem;">
+                </div>
+            </div>
+
+            <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                <div class="form-group">
+                    <label style="font-weight: 600; font-size: 0.88rem; margin-bottom: 6px; display: block;">Gender</label>
+                    <select name="gender" class="form-control" style="width: 100%; padding: 11px 14px; border: 1.5px solid var(--gray-200); border-radius: var(--border-radius); font-size: 0.9rem;">
+                        <option value="">-- Select --</option>
+                        <option value="MALE" {% if patient.gender == 'MALE' %}selected{% endif %}>Male</option>
+                        <option value="FEMALE" {% if patient.gender == 'FEMALE' %}selected{% endif %}>Female</option>
+                        <option value="OTHER" {% if patient.gender == 'OTHER' %}selected{% endif %}>Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label style="font-weight: 600; font-size: 0.88rem; margin-bottom: 6px; display: block;">Date of Birth</label>
+                    <input type="date" name="date_of_birth" value="{{ patient.date_of_birth|date:'Y-m-d'|default:'' }}" class="form-control" style="width: 100%; padding: 11px 14px; border: 1.5px solid var(--gray-200); border-radius: var(--border-radius); font-size: 0.9rem;">
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 24px;">
+                <label style="font-weight: 600; font-size: 0.88rem; margin-bottom: 6px; display: block;">Residential Address</label>
+                <textarea name="address" class="form-control" rows="2" placeholder="Street address, City..." style="width: 100%; padding: 11px 14px; border: 1.5px solid var(--gray-200); border-radius: var(--border-radius); font-size: 0.9rem; resize: vertical;">{{ patient.address|default:'' }}</textarea>
+            </div>
+
+            <div class="form-actions" style="display: flex; gap: 12px;">
+                <a href="{% url 'clinic:patient_detail' patient.patient_id %}" class="btn-secondary" style="flex: 1; justify-content: center; text-decoration: none;">
+                    <i class="fas fa-arrow-left"></i> Cancel
+                </a>
+                <button type="submit" class="btn-primary" style="flex: 2; justify-content: center; padding: 12px;">
+                    <i class="fas fa-save"></i> Save Patient Changes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

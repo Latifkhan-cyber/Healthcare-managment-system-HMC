@@ -320,9 +320,14 @@
       <h1>Our Doctors</h1>
       <div class="subtitle">Meet our team of experienced healthcare professionals</div>
     </div>
-    <div class="doc-count-badge">
-      <i class="fas fa-user-doctor"></i>
-      {{ doctors|length }} doctor{{ doctors|length|pluralize }}
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <div class="doc-count-badge">
+        <i class="fas fa-user-doctor"></i>
+        {{ doctors|length }} doctor{{ doctors|length|pluralize }}
+      </div>
+      <a href="{% url 'create_staff' %}" class="btn-primary btn-sm" style="text-decoration: none; padding: 8px 16px;">
+        <i class="fas fa-plus"></i> Add Doctor
+      </a>
     </div>
   </div>
 
@@ -393,7 +398,7 @@
         <a href="{% url 'clinic:doctor_reviews' doctor.id %}" class="doc-btn-secondary">
           <i class="fas fa-star"></i> Reviews
         </a>
-        <a href="{% url 'admin:accounts_user_change' doctor.id %}" class="doc-btn-primary">
+        <a href="{% url 'edit_staff' doctor.id %}" class="doc-btn-primary">
           <i class="fas fa-edit"></i> Edit
         </a>
       </div>
@@ -405,7 +410,7 @@
         <i class="fas fa-user-doctor"></i>
       </div>
       <h4>No doctors found</h4>
-      <p>Add doctors through the <a href="{% url 'admin:accounts_user_add' %}" style="color: var(--primary-600); font-weight: 600;">admin panel</a></p>
+      <p>Add doctors through <a href="{% url 'create_staff' %}" style="color: var(--primary-600); font-weight: 600;">Staff Management</a></p>
     </div>
     {% endfor %}
   </div>

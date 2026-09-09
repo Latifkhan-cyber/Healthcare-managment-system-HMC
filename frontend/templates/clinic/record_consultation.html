@@ -1,169 +1,339 @@
 {% extends 'base/base.html' %}
-{% block page_title %}Record Consultation{% endblock %}
-{% block page_subtitle %}Enter medical details for {{ appointment.patient.get_full_name }}{% endblock %}
+{% block page_title %}Patient Consultation & Prescription{% endblock %}
+{% block page_subtitle %}Consultation for {{ appointment.patient.get_full_name|default:appointment.patient.username }}{% endblock %}
 
 {% block content %}
-<div class="form-container" style="max-width: 720px;">
+<div style="display: grid; grid-template-columns: 1fr 340px; gap: 24px; max-width: 1200px; margin: 0 auto;">
+    <!-- Main Consultation Form -->
     <div class="form-card animate-scale-in" style="padding: 28px;">
-        <div class="form-header" style="margin-bottom: 20px;">
-            <div class="icon" style="background: var(--primary-50); color: var(--primary-600); width: 52px; height: 52px; font-size: 1.2rem;">
-                <i class="fas fa-file-medical"></i>
+        <div class="form-header" style="margin-bottom: 20px; text-align: left;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 14px;">
+                    <div class="icon" style="background: var(--primary-50); color: var(--primary-600); width: 50px; height: 50px; font-size: 1.3rem;">
+                        <i class="fas fa-stethoscope"></i>
+                    </div>
+                    <div>
+                        <h2 style="font-size: 1.3rem; margin: 0;">Record Consultation & Prescription</h2>
+                        <p style="margin: 0; font-size: 0.82rem; color: var(--gray-500);">Enter vitals, diagnosis, prescribe medicines, and order lab tests</p>
+                    </div>
+                </div>
+                <span class="badge" style="background: var(--primary-50); color: var(--primary-700); font-size: 0.85rem; padding: 6px 14px;">
+                    <i class="far fa-clock"></i> {{ appointment.time_slot|time:"h:i A" }}
+                </span>
             </div>
-            <h2 style="font-size: 1.3rem;">Record Consultation</h2>
-            <p>Enter vitals, diagnosis, prescription, and lab tests</p>
         </div>
 
-        <!-- Patient & Appointment Info -->
-        <div style="background: var(--gray-50); border-radius: var(--border-radius); padding: 16px; margin-bottom: 20px; border: 1px solid var(--gray-200);">
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
-                <div>
-                    <div style="font-size: 0.65rem; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.5px;">Patient</div>
-                    <div style="font-weight: 700; font-size: 0.95rem;">{{ appointment.patient.get_full_name|default:appointment.patient.username }}</div>
-                </div>
-                <div>
-                    <div style="font-size: 0.65rem; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.5px;">Patient ID</div>
-                    <div style="font-weight: 700; font-size: 0.95rem; color: var(--primary-700);">{{ appointment.patient.patient_id|default:"—" }}</div>
-                </div>
-                <div>
-                    <div style="font-size: 0.65rem; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.5px;">Doctor</div>
-                    <div style="font-weight: 600; font-size: 0.9rem;">Dr. {{ appointment.doctor.get_full_name|default:appointment.doctor.username }}</div>
-                </div>
-                <div>
-                    <div style="font-size: 0.65rem; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.5px;">Date & Time</div>
-                    <div style="font-weight: 600; font-size: 0.9rem;">{{ appointment.appointment_date|date:"M d" }} · {{ appointment.time_slot|time:"h:i A" }}</div>
-                </div>
-            </div>
-            {% if appointment.reason %}
-            <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--gray-200);">
-                <div style="font-size: 0.65rem; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.5px;">Reason</div>
-                <div style="font-weight: 600; font-size: 0.9rem; margin-top: 2px;">{{ appointment.reason }}</div>
-            </div>
-            {% endif %}
-        </div>
-
-        <form method="post" enctype="multipart/form-data">
+        <form method="post" enctype="multipart/form-data" id="consultationForm" onsubmit="return handleFormSubmit()">
             {% csrf_token %}
 
-            <!-- Vitals Section -->
-            <div style="margin-bottom: 20px;">
-                <div style="font-weight: 700; color: var(--gray-700); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; font-size: 0.85rem;">
-                    <i class="fas fa-heart-pulse" style="color: var(--danger);"></i>
-                    Vitals
+            <!-- Section 1: Vital Signs -->
+            <div style="background: #f8fafc; border-radius: var(--border-radius); padding: 18px; margin-bottom: 22px; border: 1px solid #e2e8f0;">
+                <div style="font-weight: 700; color: var(--gray-800); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; font-size: 0.9rem;">
+                    <i class="fas fa-heart-pulse" style="color: #ef4444;"></i>
+                    Vital Signs
                 </div>
-                <div class="form-row">
+                <div class="form-row" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
                     <div class="form-group" style="margin-bottom: 0;">
-                        <label style="font-size: 0.78rem;">Blood Pressure</label>
+                        <label style="font-size: 0.75rem; font-weight: 600;">Blood Pressure</label>
                         {{ form.blood_pressure }}
                     </div>
                     <div class="form-group" style="margin-bottom: 0;">
-                        <label style="font-size: 0.78rem;">Temperature</label>
+                        <label style="font-size: 0.75rem; font-weight: 600;">Temperature</label>
                         {{ form.temperature }}
                     </div>
                     <div class="form-group" style="margin-bottom: 0;">
-                        <label style="font-size: 0.78rem;">Weight</label>
+                        <label style="font-size: 0.75rem; font-weight: 600;">Weight</label>
                         {{ form.weight }}
                     </div>
                     <div class="form-group" style="margin-bottom: 0;">
-                        <label style="font-size: 0.78rem;">Pulse</label>
+                        <label style="font-size: 0.75rem; font-weight: 600;">Pulse (BPM)</label>
                         {{ form.pulse }}
                     </div>
                 </div>
             </div>
 
-            <!-- Symptoms -->
-            <div class="form-group">
-                <label>Symptoms</label>
-                {{ form.symptoms }}
+            <!-- Section 2: Symptoms & Diagnosis -->
+            <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label style="font-weight: 700;"><i class="fas fa-notes-medical" style="color: var(--primary-600); margin-right: 6px;"></i> Symptoms & Complaints</label>
+                    {{ form.symptoms }}
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label style="font-weight: 700;"><i class="fas fa-microscope" style="color: var(--primary-600); margin-right: 6px;"></i> Diagnosis <span class="required" style="color: red;">*</span></label>
+                    {{ form.diagnosis }}
+                    {% if form.diagnosis.errors %}<div class="form-error">{{ form.diagnosis.errors.0 }}</div>{% endif %}
+                </div>
             </div>
 
-            <!-- Diagnosis -->
-            <div class="form-group">
-                <label>Diagnosis <span class="required">*</span></label>
-                {{ form.diagnosis }}
-                {% if form.diagnosis.errors %}<div class="form-error">{{ form.diagnosis.errors.0 }}</div>{% endif %}
+            <!-- Section 3: Interactive Prescription Builder -->
+            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: var(--border-radius); padding: 18px; margin-bottom: 22px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                    <div>
+                        <div style="font-weight: 700; color: #166534; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-prescription" style="font-size: 1.1rem;"></i> Prescription & Medicines <span style="color: red;">*</span>
+                        </div>
+                        <span style="font-size: 0.75rem; color: #15803d;">Add medicines below or type in the box</span>
+                    </div>
+                    <button type="button" class="btn-primary btn-sm" onclick="addMedicineRow()" style="background: #16a34a; border-color: #16a34a; font-size: 0.78rem; padding: 5px 12px;">
+                        <i class="fas fa-plus"></i> Add Medicine Row
+                    </button>
+                </div>
+
+                <!-- Medicine Dynamic List -->
+                <div id="medicineRowsContainer" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px;">
+                    <div class="med-row" style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 2fr 36px; gap: 8px; align-items: center; background: white; padding: 10px; border-radius: 8px; border: 1px solid #dcfce7;">
+                        <input type="text" placeholder="Medicine Name (e.g. Panadol)" class="form-control med-name" style="font-size: 0.82rem;" oninput="updatePrescriptionText()">
+                        <input type="text" placeholder="Dosage (500mg)" class="form-control med-dosage" style="font-size: 0.82rem;" oninput="updatePrescriptionText()">
+                        <input type="text" placeholder="Freq (1-0-1 / TDS)" class="form-control med-freq" style="font-size: 0.82rem;" oninput="updatePrescriptionText()">
+                        <input type="text" placeholder="Duration (5 days)" class="form-control med-duration" style="font-size: 0.82rem;" oninput="updatePrescriptionText()">
+                        <input type="text" placeholder="Instructions (After meals)" class="form-control med-inst" style="font-size: 0.82rem;" oninput="updatePrescriptionText()">
+                        <button type="button" class="btn-icon danger" onclick="removeMedicineRow(this)" style="width: 32px; height: 32px;" title="Remove">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Prescription Text Area -->
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label style="font-size: 0.78rem; color: #166534; font-weight: 700;">Formatted Prescription Output (Editable)</label>
+                    {{ form.prescription }}
+                    {% if form.prescription.errors %}<div class="form-error">{{ form.prescription.errors.0 }}</div>{% endif %}
+                </div>
             </div>
 
-            <!-- Prescription -->
+            <!-- Section 4: Clinical Notes & Treatment Recommendations -->
             <div class="form-group">
-                <label>Prescription <span class="required">*</span></label>
-                {{ form.prescription }}
-                {% if form.prescription.errors %}<div class="form-error">{{ form.prescription.errors.0 }}</div>{% endif %}
-            </div>
-
-            <!-- Notes -->
-            <div class="form-group">
-                <label>Additional Notes</label>
+                <label style="font-weight: 700;"><i class="fas fa-clipboard-check" style="color: var(--primary-600); margin-right: 6px;"></i> Clinical Notes & Advice</label>
                 {{ form.notes }}
             </div>
 
-            <!-- Lab Tests Ordered -->
-            <div class="form-group">
-                <label>Lab Tests Ordered</label>
-                {{ form.lab_tests_ordered }}
-                <div class="form-help">Enter test names separated by commas (e.g., CBC, Blood Sugar, X-Ray Chest)</div>
+            <!-- Section 5: Lab Tests Ordered -->
+            <div style="background: #faf5ff; border: 1px solid #e9d5ff; border-radius: var(--border-radius); padding: 18px; margin-bottom: 22px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+                    <div style="font-weight: 700; color: #6b21a8; font-size: 0.9rem; display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-vial"></i> Order Diagnostic Lab Tests
+                    </div>
+                    <a href="{% url 'clinic:order_lab_test' %}" target="_blank" class="btn-ghost btn-sm" style="font-size: 0.75rem; color: #6b21a8;">
+                        <i class="fas fa-external-link-alt"></i> Full Lab Portal
+                    </a>
+                </div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px;">
+                    <span style="font-size: 0.75rem; color: var(--gray-600); align-self: center;">Click to Add Test:</span>
+                    <button type="button" class="btn-ghost btn-sm" onclick="addTestShortcut('CBC (Complete Blood Count)')" style="font-size: 0.72rem; padding: 4px 10px; background: white; border: 1px solid #d8b4fe;">+ CBC</button>
+                    <button type="button" class="btn-ghost btn-sm" onclick="addTestShortcut('Blood Sugar Fasting (BSF)')" style="font-size: 0.72rem; padding: 4px 10px; background: white; border: 1px solid #d8b4fe;">+ Blood Sugar</button>
+                    <button type="button" class="btn-ghost btn-sm" onclick="addTestShortcut('Lipid Profile')" style="font-size: 0.72rem; padding: 4px 10px; background: white; border: 1px solid #d8b4fe;">+ Lipid Profile</button>
+                    <button type="button" class="btn-ghost btn-sm" onclick="addTestShortcut('LFT (Liver Function Test)')" style="font-size: 0.72rem; padding: 4px 10px; background: white; border: 1px solid #d8b4fe;">+ LFT</button>
+                    <button type="button" class="btn-ghost btn-sm" onclick="addTestShortcut('Chest X-Ray (PA View)')" style="font-size: 0.72rem; padding: 4px 10px; background: white; border: 1px solid #d8b4fe;">+ Chest X-Ray</button>
+                    <button type="button" class="btn-ghost btn-sm" onclick="addTestShortcut('Serum Creatinine / RFT')" style="font-size: 0.72rem; padding: 4px 10px; background: white; border: 1px solid #d8b4fe;">+ Serum Creatinine</button>
+                    <button type="button" class="btn-ghost btn-sm" onclick="addTestShortcut('Urine Routine Examination (Urine R/E)')" style="font-size: 0.72rem; padding: 4px 10px; background: white; border: 1px solid #d8b4fe;">+ Urine R/E</button>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    {{ form.lab_tests_ordered }}
+                    <div class="form-help" style="margin-top: 4px; font-size: 0.75rem; color: #7e22ce;">Enter test names separated by commas (e.g. CBC, Blood Sugar, Chest X-Ray)</div>
+                </div>
             </div>
 
-            <!-- Follow-up -->
-            <div style="background: var(--gray-50); border-radius: var(--border-radius); padding: 14px 16px; margin-bottom: 20px; border: 1px solid var(--gray-200);">
-                <div style="display: flex; align-items: center; gap: 16px;">
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0;">
+            <!-- Section 6: Follow-up Scheduling -->
+            <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: var(--border-radius); padding: 18px; margin-bottom: 24px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 0;">
                         {{ form.follow_up_required }}
-                        <span style="font-weight: 600; font-size: 0.85rem;">Follow-up Required</span>
+                        <span style="font-weight: 700; color: #1e40af; font-size: 0.9rem;">
+                            <i class="fas fa-calendar-plus" style="margin-right: 4px;"></i> Schedule Follow-Up Visit
+                        </span>
                     </label>
-                    <div id="followup-date-field" style="display: none; flex: 1;">
+                    <div id="followup-date-field" style="display: none; flex: 1; max-width: 260px;">
+                        <label style="font-size: 0.75rem; color: #1e40af; font-weight: 600; margin-bottom: 4px;">Follow-up Date</label>
                         {{ form.follow_up_date }}
                         {% if form.follow_up_date.errors %}<div class="form-error">{{ form.follow_up_date.errors.0 }}</div>{% endif %}
                     </div>
                 </div>
             </div>
 
-            <!-- Previous Medical Records -->
-            <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: var(--border-radius); padding: 14px 16px; margin-bottom: 20px;">
-                <div style="font-weight: 700; color: #92400e; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; font-size: 0.85rem;">
-                    <i class="fas fa-folder-open"></i>
-                    Previous Medical Records (from other doctors/hospitals)
-                </div>
-                <div class="form-row">
-                    <div class="form-group" style="margin-bottom: 0;">
-                        <label style="font-size: 0.78rem;">Upload Document</label>
-                        {{ form.previous_records }}
-                        <div class="form-help">Upload prescription, report, or scan from previous doctor</div>
-                    </div>
-                    <div class="form-group" style="margin-bottom: 0;">
-                        <label style="font-size: 0.78rem;">Notes</label>
-                        {{ form.previous_records_notes }}
-                    </div>
-                </div>
-            </div>
-
-            <div class="form-actions">
-                <a href="{% url 'clinic:patient_detail' appointment.patient.patient_id %}" class="btn-secondary" style="flex: 1; justify-content: center;">
-                    <i class="fas fa-arrow-left"></i> Cancel
+            <!-- Submit Buttons -->
+            <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                <a href="{% url 'clinic:manage_queue' %}" class="btn-ghost">
+                    Cancel
                 </a>
-                <button type="submit" class="btn-primary" style="flex: 2; justify-content: center;">
-                    <i class="fas fa-save"></i> Save Consultation
+                <button type="submit" class="btn-primary btn-lg" style="padding: 12px 28px; font-weight: 700;">
+                    <i class="fas fa-check-circle"></i> Complete Consultation
                 </button>
             </div>
         </form>
     </div>
+
+    <!-- Sidebar: Patient Overview & Medical History -->
+    <div>
+        <!-- Patient Summary Card -->
+        <div class="data-card animate-fade-in-up delay-150" style="margin-bottom: 20px; padding: 20px;">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+                <div style="width: 46px; height: 46px; border-radius: 12px; background: var(--primary-100); color: var(--primary-700); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; font-weight: 800;">
+                    {{ appointment.patient.username|slice:":1"|upper }}
+                </div>
+                <div>
+                    <h4 style="margin: 0; font-size: 1rem; font-weight: 800;">{{ appointment.patient.get_full_name|default:appointment.patient.username }}</h4>
+                    <span style="font-weight: 700; color: var(--primary-700); font-size: 0.8rem;">ID: {{ appointment.patient.patient_id|default:"N/A" }}</span>
+                </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.82rem;">
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--gray-100); padding-bottom: 6px;">
+                    <span style="color: var(--gray-500);">Gender / Age:</span>
+                    <span style="font-weight: 600;">{{ appointment.patient.get_gender_display|default:"—" }} {% if appointment.patient.get_age %}· {{ appointment.patient.get_age }} yrs{% endif %}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--gray-100); padding-bottom: 6px;">
+                    <span style="color: var(--gray-500);">Blood Group:</span>
+                    <span style="font-weight: 700; color: var(--danger);">{{ appointment.patient.blood_group|default:"Unspecified" }}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--gray-100); padding-bottom: 6px;">
+                    <span style="color: var(--gray-500);">Phone:</span>
+                    <span style="font-weight: 600;">{{ appointment.patient.phone|default:"—" }}</span>
+                </div>
+                {% if appointment.reason %}
+                <div style="padding-top: 6px;">
+                    <span style="color: var(--gray-500); display: block; font-size: 0.72rem; text-transform: uppercase;">Stated Problem:</span>
+                    <span style="font-weight: 600; color: var(--gray-800);">"{{ appointment.reason }}"</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <div style="margin-top: 16px;">
+                <a href="{% url 'clinic:patient_detail' appointment.patient.patient_id|default:appointment.patient.id %}" target="_blank" class="btn-ghost btn-sm" style="width: 100%; justify-content: center;">
+                    <i class="fas fa-external-link-alt"></i> Full Patient File
+                </a>
+            </div>
+        </div>
+
+        <!-- Previous Medical History Accordion -->
+        <div class="data-card animate-fade-in-up delay-200" style="padding: 20px;">
+            <h4 style="margin: 0 0 14px 0; font-size: 0.95rem; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+                <i class="fas fa-history" style="color: var(--primary-600);"></i> Past Visits & History
+            </h4>
+
+            {% if past_history %}
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    {% for rec in past_history %}
+                    <div style="background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: 8px; padding: 12px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <span style="font-weight: 700; font-size: 0.8rem; color: var(--primary-700);">{{ rec.visit_date|date:"M d, Y" }}</span>
+                            <span style="font-size: 0.72rem; color: var(--gray-500);">Dr. {{ rec.doctor.get_full_name|default:rec.doctor.username }}</span>
+                        </div>
+                        <div style="font-size: 0.82rem; font-weight: 600; color: var(--gray-800); margin-bottom: 4px;">
+                            Dx: {{ rec.diagnosis|truncatechars:60 }}
+                        </div>
+                        {% if rec.prescription %}
+                        <div style="font-size: 0.75rem; color: var(--gray-600); white-space: pre-line; background: white; padding: 6px 8px; border-radius: 4px; border: 1px solid var(--gray-200);">
+                            {{ rec.prescription|truncatechars:100 }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div style="text-align: center; padding: 20px 0; color: var(--gray-500); font-size: 0.82rem;">
+                    <i class="fas fa-folder-open" style="font-size: 1.8rem; margin-bottom: 8px; opacity: 0.5; display: block;"></i>
+                    No previous medical records for this patient
+                </div>
+            {% endif %}
+        </div>
+    </div>
 </div>
 
-<style>
-    input[type="text"], input[type="number"], input[type="file"], input[type="date"], select, textarea {
-        width: 100%; padding: 10px 12px; border: 1.5px solid var(--gray-200); border-radius: var(--border-radius); font-size: 0.88rem; font-family: var(--font-sans);
-    }
-    textarea { min-height: 70px; resize: vertical; }
-    input:focus, textarea:focus { outline: none; border-color: var(--primary-400); box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.1); }
-    input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--primary-600); }
-</style>
-
 <script>
-    var followUpCheckbox = document.querySelector('input[name="follow_up_required"]');
-    var followUpDateField = document.getElementById('followup-date-field');
-    if (followUpCheckbox) {
-        followUpCheckbox.addEventListener('change', function() {
-            followUpDateField.style.display = this.checked ? 'block' : 'none';
-        });
+function addMedicineRow() {
+    const container = document.getElementById('medicineRowsContainer');
+    const row = document.createElement('div');
+    row.className = 'med-row';
+    row.style = 'display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 2fr 36px; gap: 8px; align-items: center; background: white; padding: 10px; border-radius: 8px; border: 1px solid #dcfce7;';
+    row.innerHTML = `
+        <input type="text" placeholder="Medicine Name (e.g. Tab Panadol)" class="form-control med-name" style="font-size: 0.82rem;" oninput="updatePrescriptionText()">
+        <input type="text" placeholder="Dosage (500mg)" class="form-control med-dosage" style="font-size: 0.82rem;" oninput="updatePrescriptionText()">
+        <input type="text" placeholder="Freq (1-0-1 / TDS)" class="form-control med-freq" style="font-size: 0.82rem;" oninput="updatePrescriptionText()">
+        <input type="text" placeholder="Duration (5 days)" class="form-control med-duration" style="font-size: 0.82rem;" oninput="updatePrescriptionText()">
+        <input type="text" placeholder="Instructions (After meals)" class="form-control med-inst" style="font-size: 0.82rem;" oninput="updatePrescriptionText()">
+        <button type="button" class="btn-icon danger" onclick="removeMedicineRow(this)" style="width: 32px; height: 32px;" title="Remove">
+            <i class="fas fa-trash-alt"></i>
+        </button>
+    `;
+    container.appendChild(row);
+}
+
+function removeMedicineRow(btn) {
+    const container = document.getElementById('medicineRowsContainer');
+    if (container.children.length > 1) {
+        btn.closest('.med-row').remove();
+        updatePrescriptionText();
+    } else {
+        const row = btn.closest('.med-row');
+        row.querySelectorAll('input').forEach(i => i.value = '');
+        updatePrescriptionText();
     }
+}
+
+function updatePrescriptionText() {
+    const rows = document.querySelectorAll('.med-row');
+    const lines = [];
+    rows.forEach((r, idx) => {
+        const name = r.querySelector('.med-name').value.trim();
+        const dosage = r.querySelector('.med-dosage').value.trim();
+        const freq = r.querySelector('.med-freq').value.trim();
+        const duration = r.querySelector('.med-duration').value.trim();
+        const inst = r.querySelector('.med-inst').value.trim();
+
+        if (name) {
+            let line = `${idx + 1}. ${name}`;
+            if (dosage) line += ` (${dosage})`;
+            if (freq) line += ` — ${freq}`;
+            if (duration) line += ` for ${duration}`;
+            if (inst) line += ` [${inst}]`;
+            lines.push(line);
+        }
+    });
+
+    const prescriptionField = document.getElementById('id_prescription');
+    if (prescriptionField && lines.length > 0) {
+        prescriptionField.value = lines.join('\n');
+    }
+}
+
+function addTestShortcut(testName) {
+    const labField = document.getElementById('id_lab_tests_ordered');
+    if (!labField) return;
+    const current = labField.value.trim();
+    if (current.includes(testName)) return;
+    if (current) {
+        labField.value = current + ', ' + testName;
+    } else {
+        labField.value = testName;
+    }
+}
+
+function handleFormSubmit() {
+    updatePrescriptionText();
+    const prescriptionField = document.getElementById('id_prescription');
+    if (!prescriptionField || !prescriptionField.value.trim()) {
+        alert('Please enter at least one medicine or prescription details.');
+        return false;
+    }
+    const diagnosisField = document.getElementById('id_diagnosis');
+    if (!diagnosisField || !diagnosisField.value.trim()) {
+        alert('Please enter a diagnosis for the patient.');
+        return false;
+    }
+    return true;
+}
+
+// Follow-up toggle handler
+document.addEventListener('DOMContentLoaded', function() {
+    const followUpCheck = document.getElementById('id_follow_up_required');
+    const followUpField = document.getElementById('followup-date-field');
+    if (followUpCheck && followUpField) {
+        function toggleFollowUp() {
+            followUpField.style.display = followUpCheck.checked ? 'block' : 'none';
+        }
+        followUpCheck.addEventListener('change', toggleFollowUp);
+        toggleFollowUp();
+    }
+});
 </script>
 {% endblock %}

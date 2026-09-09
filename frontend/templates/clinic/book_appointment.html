@@ -1,45 +1,65 @@
 {% extends 'base/base.html' %}
-{% block page_title %}Book Appointment{% endblock %}
-{% block page_subtitle %}Select a doctor and schedule your visit{% endblock %}
+{% block page_title %}Book an Appointment{% endblock %}
+{% block page_subtitle %}Select your specialist, choose a convenient date & time slot, and confirm your visit{% endblock %}
 
 {% block content %}
-<div class="animate-fade-in-up">
-    <!-- Specialization Filter -->
-    <div style="margin-bottom: 24px;">
+<div class="animate-fade-in-up" style="max-width: 1000px; margin: 0 auto;">
+    <!-- Specialization Filter Chips -->
+    <div class="data-card" style="margin-bottom: 24px; padding: 18px 22px;">
         <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-            <span style="font-size: 0.8rem; font-weight: 600; color: var(--gray-500);">Filter by:</span>
-            <button class="btn-filter active" onclick="filterDoctors('ALL', this)">All Doctors</button>
+            <span style="font-size: 0.85rem; font-weight: 700; color: var(--gray-600); margin-right: 6px;">
+                <i class="fas fa-filter" style="color: var(--primary-600);"></i> Department:
+            </span>
+            <button type="button" class="badge btn-spec-filter active" onclick="filterDoctors('ALL', this)" style="cursor: pointer; border: none; padding: 6px 14px; font-size: 0.8rem; background: var(--primary-600); color: white;">
+                All Doctors
+            </button>
             {% for spec in specializations %}
                 {% if spec %}
-                <button class="btn-filter" onclick="filterDoctors('{{ spec|escapejs }}', this)">{{ spec }}</button>
+                <button type="button" class="badge btn-spec-filter" onclick="filterDoctors('{{ spec|escapejs }}', this)" style="cursor: pointer; border: none; padding: 6px 14px; font-size: 0.8rem; background: var(--gray-100); color: var(--gray-700);">
+                    {{ spec }}
+                </button>
                 {% endif %}
             {% endfor %}
         </div>
     </div>
 
-    <!-- Doctor Selection Cards -->
+    <!-- Doctor Selection Grid -->
     <div style="margin-bottom: 24px;">
-        <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 12px;">Select a Doctor</h3>
-        <div class="doctor-grid" id="doctorGrid">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h3 style="font-size: 1.05rem; font-weight: 800; margin: 0;">
+                <i class="fas fa-user-doctor" style="color: var(--primary-600); margin-right: 8px;"></i> 1. Select Doctor <span style="color: red;">*</span>
+            </h3>
+            <span style="font-size: 0.78rem; color: var(--gray-500);">Click on any doctor card to select</span>
+        </div>
+
+        <div class="doctor-grid" id="doctorGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;">
             {% for doc in doctors %}
             <div class="doctor-card" data-specialization="{{ doc.specialization|default:'' }}"
-                 onclick="selectDoctor({{ doc.id }}, '{{ doc.specialization|escapejs }}', {{ doc.consultation_fee }})"
-                 id="doctor-card-{{ doc.id }}">
-                <div class="doctor-avatar">
-                    {% if doc.profile_photo %}
-                        <img src="{{ doc.profile_photo.url }}" alt="Dr. {{ doc.get_full_name|default:doc.username }}" loading="lazy" decoding="async" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
-                    {% else %}
-                        {{ doc.username|slice:":1"|upper }}
-                    {% endif %}
+                 onclick="selectDoctor({{ doc.id }}, 'Dr. {{ doc.get_full_name|default:doc.username|escapejs }}', '{{ doc.specialization|default:"General"|escapejs }}', {{ doc.consultation_fee|default:1500 }})"
+                 id="doctor-card-{{ doc.id }}"
+                 style="cursor: pointer; border: 2px solid var(--gray-200); border-radius: var(--border-radius); padding: 18px; background: white; transition: all 0.2s; position: relative;">
+                
+                <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 10px;">
+                    <div class="doctor-avatar" style="width: 54px; height: 54px; border-radius: 14px; overflow: hidden; background: var(--primary-100); display: flex; align-items: center; justify-content: center; font-size: 1.3rem; font-weight: 800; color: var(--primary-700); flex-shrink: 0;">
+                        {% if doc.profile_photo %}
+                            <img src="{{ doc.profile_photo.url }}" alt="Dr. {{ doc.get_full_name|default:doc.username }}" style="width: 100%; height: 100%; object-fit: cover;">
+                        {% else %}
+                            {{ doc.username|slice:":1"|upper }}
+                        {% endif %}
+                    </div>
+                    <div>
+                        <div class="doctor-name" style="font-weight: 800; font-size: 0.95rem; color: var(--gray-800);">Dr. {{ doc.get_full_name|default:doc.username }}</div>
+                        <div class="doctor-spec" style="font-size: 0.78rem; font-weight: 700; color: var(--primary-600);">{{ doc.specialization|default:"General" }}</div>
+                    </div>
                 </div>
-                <div class="doctor-name">Dr. {{ doc.get_full_name|default:doc.username }}</div>
-                <div class="doctor-spec">{{ doc.specialization|default:"General" }}</div>
-                <div style="font-size: 0.75rem; color: var(--gray-500); margin-bottom: 8px; min-height: 36px;">{{ doc.address|default:"Main Hospital Clinic" }}</div>
-                <div style="font-size: 0.76rem; color: var(--gray-600); margin-bottom: 8px; min-height: 40px;">{{ doc.bio|default:"Compassionate care with a focus on patient comfort and timely treatment." }}</div>
-                <div class="doctor-fee">PKR {{ doc.consultation_fee }}</div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--gray-100);">
+                    <span style="font-size: 0.78rem; color: var(--gray-500);">Fee:</span>
+                    <span class="doctor-fee" style="font-weight: 800; color: var(--success); font-size: 0.85rem;">PKR {{ doc.consultation_fee|default:1500 }}</span>
+                </div>
             </div>
             {% empty %}
-            <div style="grid-column: span 3; text-align: center; padding: 32px; color: var(--gray-500);">
+            <div style="grid-column: 1 / -1; text-align: center; padding: 32px; color: var(--gray-500);">
                 <i class="fas fa-user-doctor" style="font-size: 2rem; margin-bottom: 8px;"></i>
                 <p>No doctors available at the moment.</p>
             </div>
@@ -47,226 +67,261 @@
         </div>
     </div>
 
-    <!-- Booking Form -->
-    <div class="form-card" style="max-width: 600px;">
-        <div class="form-header">
-            <div class="icon" style="background: var(--info-bg); color: var(--info);">
-                <i class="fas fa-calendar-plus"></i>
+    <!-- Booking Form Card -->
+    <div class="form-card" style="max-width: 680px; margin: 0 auto; padding: 28px;">
+        <div class="form-header" style="margin-bottom: 20px;">
+            <div class="icon" style="background: var(--primary-50); color: var(--primary-600); width: 50px; height: 50px; font-size: 1.3rem;">
+                <i class="fas fa-calendar-check"></i>
             </div>
-            <h2>Appointment Details</h2>
-            <p>Fill in the date and time for your visit</p>
+            <h2 style="font-size: 1.3rem; margin: 0 0 4px 0;">2. Schedule Date & Time</h2>
+            <p style="margin: 0; font-size: 0.82rem; color: var(--gray-500);">Pick a date and choose an available 30-minute consultation slot</p>
         </div>
 
-        <div class="info-box">
-            <i class="fas fa-info-circle"></i>
-            <span>You can only book appointments for today or future dates (up to 1 year in advance).</span>
-        </div>
-
-        <form method="post" id="bookingForm">
+        <form method="post" id="bookingForm" onsubmit="return validateBookingForm()">
             {% csrf_token %}
-            <input type="hidden" name="doctor" id="selectedDoctorId" value="">
+            <input type="hidden" name="doctor" id="selectedDoctorId" value="{{ preselected_doctor_id }}">
 
-            <!-- Selected Doctor Display -->
-            <div id="selectedDoctorDisplay" style="display: none; background: var(--primary-50); border: 1px solid var(--primary-200); border-radius: var(--border-radius); padding: 12px 16px; margin-bottom: 20px;">
+            <!-- Selected Doctor Summary Box -->
+            <div id="selectedDoctorDisplay" style="display: none; background: #eff6ff; border: 1.5px solid #93c5fd; border-radius: var(--border-radius); padding: 14px 18px; margin-bottom: 20px;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <div style="font-size: 0.7rem; text-transform: uppercase; color: var(--gray-500);">Selected Doctor</div>
-                        <div style="font-weight: 700; color: var(--primary-700);" id="selectedDoctorName">—</div>
-                        <div style="font-size: 0.8rem; color: var(--gray-500);" id="selectedDoctorSpec">—</div>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <i class="fas fa-user-check" style="font-size: 1.5rem; color: #2563eb;"></i>
+                        <div>
+                            <div style="font-size: 0.7rem; text-transform: uppercase; color: #1e40af; font-weight: 700;">Selected Specialist</div>
+                            <div style="font-weight: 800; font-size: 1rem; color: var(--gray-900);" id="selectedDoctorName">—</div>
+                            <div style="font-size: 0.8rem; color: #3b82f6; font-weight: 600;" id="selectedDoctorSpec">—</div>
+                        </div>
                     </div>
                     <div style="text-align: right;">
-                        <div style="font-size: 0.7rem; text-transform: uppercase; color: var(--gray-500);">Fee</div>
-                        <div style="font-weight: 700; color: var(--success);" id="selectedDoctorFee">—</div>
+                        <div style="font-size: 0.7rem; text-transform: uppercase; color: #1e40af; font-weight: 700;">Consultation Fee</div>
+                        <div style="font-weight: 800; color: #16a34a; font-size: 1.1rem;" id="selectedDoctorFee">—</div>
                     </div>
                 </div>
             </div>
 
-            <div class="form-group">
-                <label>Appointment Date *</label>
+            <!-- Alternative Doctor Dropdown Selection -->
+            <div class="form-group" style="margin-bottom: 18px;">
+                <label style="font-weight: 700; font-size: 0.85rem;">Doctor Dropdown <span style="font-weight: 400; color: var(--gray-500);">(or select from cards above)</span></label>
+                <select id="doctorDropdown" class="form-control" onchange="onDoctorDropdownChange(this)" style="font-size: 0.9rem; padding: 10px 12px;">
+                    <option value="">-- Choose a Doctor --</option>
+                    {% for doc in doctors %}
+                        <option value="{{ doc.id }}" data-name="Dr. {{ doc.get_full_name|default:doc.username }}" data-spec="{{ doc.specialization|default:'General' }}" data-fee="{{ doc.consultation_fee|default:1500 }}">
+                            Dr. {{ doc.get_full_name|default:doc.username }} ({{ doc.specialization|default:"Specialist" }}) — PKR {{ doc.consultation_fee|default:1500 }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Appointment Date Picker -->
+            <div class="form-group" style="margin-bottom: 18px;">
+                <label style="font-weight: 700; font-size: 0.85rem;">Appointment Date <span style="color: red;">*</span></label>
                 <input type="date" name="appointment_date" class="form-control"
-                       min="{{ today|date:'Y-m-d' }}" required>
+                       id="appointmentDateField"
+                       min="{{ today|date:'Y-m-d' }}" value="{{ today|date:'Y-m-d' }}" required
+                       style="font-size: 0.95rem; padding: 10px 14px;">
             </div>
 
-            <div class="form-group">
-                <label>Time Slot *</label>
-                <div class="time-slots" id="timeSlots">
-                    <div style="color: var(--gray-500); font-size: 0.85rem; padding: 8px 0;">
-                        <i class="fas fa-info-circle"></i> Select a doctor and date first to see available slots
+            <!-- Time Slots Grid -->
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label style="font-weight: 700; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center;">
+                    <span>Select Time Slot <span style="color: red;">*</span></span>
+                    <span id="selectedSlotDisplay" style="font-size: 0.8rem; color: var(--primary-700); font-weight: 700;"></span>
+                </label>
+                <div class="time-slots" id="timeSlots" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; margin-top: 6px;">
+                    <div style="color: var(--gray-500); font-size: 0.85rem; padding: 12px 0; grid-column: 1 / -1;">
+                        <i class="fas fa-info-circle" style="color: var(--primary-600);"></i> Please select a doctor above to view available time slots.
                     </div>
                 </div>
-                <input type="hidden" name="time_slot" id="selectedTime" value="">
-                <div class="form-help" id="slotHelp">Click a time slot to select it</div>
+                <input type="hidden" name="time_slot" id="selectedTime" value="" required>
             </div>
 
-            <div class="form-group">
-                <label>Reason (optional)</label>
-                <textarea name="reason" class="form-control" rows="2"
-                          placeholder="Briefly describe your health concern"></textarea>
+            <!-- Reason / Health Concern -->
+            <div class="form-group" style="margin-bottom: 24px;">
+                <label style="font-weight: 700; font-size: 0.85rem;">Reason for Visit / Health Problem <span style="color: var(--gray-400); font-weight: 400;">(Optional)</span></label>
+                <textarea name="reason" class="form-control" rows="2" placeholder="Briefly describe your symptoms or reason for visit..."></textarea>
             </div>
 
-            {% if form.non_field_errors %}
-                <div class="alert alert-danger" style="margin-bottom: 16px;">
-                    {{ form.non_field_errors.0 }}
-                </div>
-            {% endif %}
-
-            <button type="submit" class="btn-primary btn-lg" style="width: 100%; justify-content: center;" id="submitBtn" disabled>
-                <i class="fas fa-check-circle"></i> Confirm Booking
+            <button type="submit" class="btn-primary btn-lg" id="submitBtn" style="width: 100%; justify-content: center; font-weight: 700; padding: 12px 24px;">
+                <i class="fas fa-check-circle"></i> Confirm & Proceed to Payment
             </button>
         </form>
     </div>
 </div>
 
 <style>
-    .btn-filter {
-        padding: 6px 14px;
-        border-radius: 20px;
-        border: 1.5px solid var(--gray-200);
-        background: white;
-        font-size: 0.8rem;
-        font-weight: 500;
-        color: var(--gray-600);
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-    .btn-filter:hover { border-color: var(--primary-400); color: var(--primary-600); }
-    .btn-filter.active { background: var(--primary-600); color: white; border-color: var(--primary-600); }
-
-    .doctor-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: 16px;
-    }
-    .doctor-card {
-        border: 2px solid var(--gray-200);
-        border-radius: var(--border-radius);
-        padding: 20px;
-        text-align: center;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-    .doctor-card:hover { border-color: var(--primary-400); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-    .doctor-card.selected { border-color: var(--primary-600); background: var(--primary-50); }
-    .doctor-avatar {
-        width: 56px; height: 56px; border-radius: 50%; margin: 0 auto 12px;
-        background: var(--primary-100); color: var(--primary-700);
-        display: flex; align-items: center; justify-content: center;
-        font-size: 1.2rem; font-weight: 700; overflow: hidden;
-    }
-    .doctor-name { font-weight: 700; font-size: 0.95rem; margin-bottom: 4px; }
-    .doctor-spec { font-size: 0.8rem; color: var(--gray-500); margin-bottom: 8px; }
-    .doctor-fee { font-size: 0.85rem; font-weight: 700; color: var(--success); }
-
-    .time-slots {
-        display: flex; flex-wrap: wrap; gap: 8px;
-    }
-    .time-slot {
-        padding: 8px 14px; border: 1.5px solid var(--gray-200);
-        border-radius: var(--border-radius); font-size: 0.8rem;
-        cursor: pointer; transition: all 0.2s; user-select: none;
-    }
-    .time-slot:hover { border-color: var(--primary-400); color: var(--primary-600); }
-    .time-slot.selected { background: var(--primary-600); color: white; border-color: var(--primary-600); }
-    .time-slot.disabled { opacity: 0.4; cursor: not-allowed; }
+.doctor-card.selected {
+    border-color: #2563eb !important;
+    background: #f0f7ff !important;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+}
+.time-slot {
+    padding: 10px 8px;
+    border: 1.5px solid var(--gray-200);
+    border-radius: 8px;
+    text-align: center;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    background: white;
+    transition: all 0.15s ease;
+}
+.time-slot:hover:not(.disabled) {
+    border-color: var(--primary-500);
+    color: var(--primary-700);
+    background: var(--primary-50);
+}
+.time-slot.selected {
+    border-color: var(--primary-600) !important;
+    background: var(--primary-600) !important;
+    color: white !important;
+    font-weight: 700;
+}
+.time-slot.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background: var(--gray-100);
+    text-decoration: line-through;
+}
 </style>
 
 <script>
-    var selectedDoctor = null;
+var selectedDoctor = null;
 
-    function filterDoctors(spec, btn) {
-        // Update active button
-        document.querySelectorAll('.btn-filter').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
+function filterDoctors(spec, btn) {
+    document.querySelectorAll('.btn-spec-filter').forEach(b => {
+        b.style.background = 'var(--gray-100)';
+        b.style.color = 'var(--gray-700)';
+    });
+    btn.style.background = 'var(--primary-600)';
+    btn.style.color = 'white';
 
-        // Filter doctor cards
-        document.querySelectorAll('.doctor-card').forEach(card => {
-            if (spec === 'ALL' || card.dataset.specialization === spec) {
-                card.style.display = '';
-            } else {
-                card.style.display = 'none';
-            }
-        });
-    }
-
-    function selectDoctor(id, spec, fee) {
-        // Update card selection
-        document.querySelectorAll('.doctor-card').forEach(c => c.classList.remove('selected'));
-        document.getElementById('doctor-card-' + id).classList.add('selected');
-
-        // Update hidden form field
-        document.getElementById('selectedDoctorId').value = id;
-
-        // Update display
-        var card = document.getElementById('doctor-card-' + id);
-        document.getElementById('selectedDoctorName').textContent = card.querySelector('.doctor-name').textContent;
-        document.getElementById('selectedDoctorSpec').textContent = spec || 'General';
-        document.getElementById('selectedDoctorFee').textContent = 'PKR ' + fee;
-        document.getElementById('selectedDoctorDisplay').style.display = 'block';
-
-        selectedDoctor = id;
-
-        // If date already selected, reload slots
-        var selectedDate = document.querySelector('[name="appointment_date"]').value;
-        if (selectedDate) {
-            loadTimeSlots(id, selectedDate);
+    document.querySelectorAll('.doctor-card').forEach(card => {
+        if (spec === 'ALL' || card.dataset.specialization === spec) {
+            card.style.display = '';
+        } else {
+            card.style.display = 'none';
         }
+    });
+}
 
-        checkForm();
+function selectDoctor(id, name, spec, fee) {
+    selectedDoctor = id;
+
+    // Highlight card
+    document.querySelectorAll('.doctor-card').forEach(c => c.classList.remove('selected'));
+    var card = document.getElementById('doctor-card-' + id);
+    if (card) {
+        card.classList.add('selected');
     }
 
-    // Date change triggers slot reload
-    var dateInput = document.querySelector('[name="appointment_date"]');
+    // Update hidden field & dropdown
+    document.getElementById('selectedDoctorId').value = id;
+    var dropdown = document.getElementById('doctorDropdown');
+    if (dropdown) dropdown.value = id;
+
+    // Update summary box
+    document.getElementById('selectedDoctorName').textContent = name || 'Doctor';
+    document.getElementById('selectedDoctorSpec').textContent = spec || 'General';
+    document.getElementById('selectedDoctorFee').textContent = 'PKR ' + (fee || 1500);
+    document.getElementById('selectedDoctorDisplay').style.display = 'block';
+
+    // Load available slots
+    var dateVal = document.getElementById('appointmentDateField').value;
+    if (dateVal) {
+        loadTimeSlots(id, dateVal);
+    }
+}
+
+function onDoctorDropdownChange(select) {
+    if (!select.value) return;
+    var opt = select.options[select.selectedIndex];
+    var id = select.value;
+    var name = opt.dataset.name;
+    var spec = opt.dataset.spec;
+    var fee = opt.dataset.fee;
+    selectDoctor(id, name, spec, fee);
+}
+
+function loadTimeSlots(doctorId, date) {
+    var container = document.getElementById('timeSlots');
+    container.innerHTML = '<div style="color: var(--gray-500); font-size: 0.85rem; padding: 12px 0; grid-column: 1 / -1;"><i class="fas fa-spinner fa-spin"></i> Loading available 30-min slots...</div>';
+    document.getElementById('selectedTime').value = '';
+    document.getElementById('selectedSlotDisplay').textContent = '';
+
+    fetch('/clinic/book/slots/?doctor_id=' + doctorId + '&date=' + date)
+        .then(r => r.json())
+        .then(data => {
+            container.innerHTML = '';
+            if (!data.slots || data.slots.length === 0) {
+                container.innerHTML = '<div style="color: var(--gray-500); font-size: 0.85rem; padding: 12px 0; grid-column: 1 / -1;"><i class="fas fa-calendar-times"></i> ' + (data.message || 'No slots available for this date.') + '</div>';
+                return;
+            }
+
+            data.slots.forEach(function(slot) {
+                var div = document.createElement('div');
+                div.className = 'time-slot' + (slot.available ? '' : ' disabled');
+                div.textContent = slot.display;
+                div.dataset.time = slot.time;
+                if (slot.available) {
+                    div.addEventListener('click', function() {
+                        document.querySelectorAll('.time-slot').forEach(s => s.classList.remove('selected'));
+                        this.classList.add('selected');
+                        document.getElementById('selectedTime').value = this.dataset.time;
+                        document.getElementById('selectedSlotDisplay').textContent = 'Selected: ' + slot.display;
+                    });
+                }
+                container.appendChild(div);
+            });
+        })
+        .catch(function(err) {
+            container.innerHTML = '<div style="color: var(--danger); font-size: 0.85rem; padding: 12px 0; grid-column: 1 / -1;">Error loading slots. Please select date again.</div>';
+        });
+}
+
+function validateBookingForm() {
+    var doctor = document.getElementById('selectedDoctorId').value;
+    if (!doctor) {
+        alert('Please select a doctor for your appointment.');
+        return false;
+    }
+    var time = document.getElementById('selectedTime').value;
+    if (!time) {
+        alert('Please click and select an available time slot.');
+        return false;
+    }
+    return true;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    var dateInput = document.getElementById('appointmentDateField');
     if (dateInput) {
         dateInput.addEventListener('change', function() {
             if (selectedDoctor && this.value) {
                 loadTimeSlots(selectedDoctor, this.value);
             }
-            checkForm();
         });
     }
 
-    function loadTimeSlots(doctorId, date) {
-        var container = document.getElementById('timeSlots');
-        container.innerHTML = '<div style="color: var(--gray-500); font-size: 0.85rem; padding: 8px 0;"><i class="fas fa-spinner fa-spin"></i> Loading available slots...</div>';
-
-        fetch('/clinic/book/slots/?doctor_id=' + doctorId + '&date=' + date)
-            .then(r => r.json())
-            .then(data => {
-                container.innerHTML = '';
-                document.getElementById('selectedTime').value = '';
-
-                if (data.slots.length === 0) {
-                    container.innerHTML = '<div style="color: var(--gray-500); font-size: 0.85rem; padding: 8px 0;"><i class="fas fa-calendar-times"></i> ' + (data.message || 'No slots available for this date.') + '</div>';
-                    return;
-                }
-
-                data.slots.forEach(function(slot) {
-                    var div = document.createElement('div');
-                    div.className = 'time-slot' + (slot.available ? '' : ' disabled');
-                    div.textContent = slot.display;
-                    div.dataset.time = slot.time;
-                    if (slot.available) {
-                        div.addEventListener('click', function() {
-                            document.querySelectorAll('.time-slot').forEach(s => s.classList.remove('selected'));
-                            this.classList.add('selected');
-                            document.getElementById('selectedTime').value = this.dataset.time;
-                            checkForm();
-                        });
-                    }
-                    container.appendChild(div);
-                });
-            })
-            .catch(function() {
-                container.innerHTML = '<div style="color: var(--danger); font-size: 0.85rem; padding: 8px 0;">Error loading slots. Please try again.</div>';
-            });
+    // Handle preselected doctor if passed in URL
+    var preselected = "{{ preselected_doctor_id }}";
+    if (preselected) {
+        var card = document.getElementById('doctor-card-' + preselected);
+        if (card) {
+            card.click();
+        } else {
+            var dropdown = document.getElementById('doctorDropdown');
+            if (dropdown) {
+                dropdown.value = preselected;
+                onDoctorDropdownChange(dropdown);
+            }
+        }
+    } else {
+        // Auto-select first doctor by default for ease of booking
+        var firstCard = document.querySelector('.doctor-card');
+        if (firstCard) {
+            firstCard.click();
+        }
     }
-
-    function checkForm() {
-        var doctor = document.getElementById('selectedDoctorId').value;
-        var time = document.getElementById('selectedTime').value;
-        var date = document.querySelector('[name="appointment_date"]').value;
-        var btn = document.getElementById('submitBtn');
-        btn.disabled = !(doctor && time && date);
-    }
+});
 </script>
 {% endblock %}

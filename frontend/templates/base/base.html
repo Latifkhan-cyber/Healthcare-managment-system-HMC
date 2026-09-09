@@ -41,34 +41,43 @@
 
             <!-- PATIENT MENU -->
             {% if user.role == 'PATIENT' %}
-            <div class="menu-category">Appointments</div>
+            <div class="menu-category">Appointments & Doctors</div>
             <a href="{% url 'clinic:book_appointment' %}" class="menu-item {% if request.resolver_match.url_name == 'book_appointment' %}active{% endif %}">
                 <i class="fas fa-calendar-plus"></i>
                 <span>Book Appointment</span>
+            </a>
+            <a href="{% url 'clinic:public_doctor_search' %}" class="menu-item {% if request.resolver_match.url_name == 'public_doctor_search' %}active{% endif %}">
+                <i class="fas fa-user-md"></i>
+                <span>Find Doctor</span>
             </a>
             <a href="{% url 'clinic:my_appointments' %}" class="menu-item {% if request.resolver_match.url_name == 'my_appointments' %}active{% endif %}">
                 <i class="fas fa-calendar-alt"></i>
                 <span>My Appointments</span>
             </a>
-            <div class="menu-category">Billing</div>
-            <a href="{% url 'clinic:patient_payment_history' %}" class="menu-item {% if request.resolver_match.url_name == 'patient_payment_history' %}active{% endif %}">
-                <i class="fas fa-file-invoice-dollar"></i>
-                <span>My Payments</span>
+            <a href="{% url 'clinic:queue_display' %}" target="_blank" class="menu-item">
+                <i class="fas fa-tv"></i>
+                <span>Live Queue Status</span>
             </a>
-            <div class="menu-category">Medical Records</div>
+
+            <div class="menu-category">Medical & Prescriptions</div>
             <a href="{% url 'clinic:view_history' %}" class="menu-item {% if request.resolver_match.url_name == 'view_history' %}active{% endif %}">
-                <i class="fas fa-file-medical"></i>
-                <span>My History</span>
+                <i class="fas fa-file-prescription"></i>
+                <span>Medical History</span>
             </a>
             <a href="{% url 'clinic:lab_tests' %}" class="menu-item {% if request.resolver_match.url_name == 'lab_tests' %}active{% endif %}">
-                <i class="fas fa-vial"></i>
-                <span>My Lab Tests</span>
+                <i class="fas fa-vial-circle-check"></i>
+                <span>Lab Reports</span>
             </a>
             <a href="{% url 'clinic:view_follow_ups' %}" class="menu-item {% if request.resolver_match.url_name == 'view_follow_ups' %}active{% endif %}">
                 <i class="fas fa-notes-medical"></i>
                 <span>Follow-Ups</span>
             </a>
-            <div class="menu-category">Account</div>
+
+            <div class="menu-category">Billing & Account</div>
+            <a href="{% url 'clinic:patient_payment_history' %}" class="menu-item {% if request.resolver_match.url_name == 'patient_payment_history' %}active{% endif %}">
+                <i class="fas fa-receipt"></i>
+                <span>Payments & Invoices</span>
+            </a>
             <a href="{% url 'clinic:patient_profile' %}" class="menu-item {% if request.resolver_match.url_name == 'patient_profile' %}active{% endif %}">
                 <i class="fas fa-user-circle"></i>
                 <span>My Profile</span>
@@ -77,66 +86,81 @@
 
             <!-- DOCTOR MENU -->
             {% if user.role == 'DOCTOR' %}
-            <div class="menu-category">Clinic</div>
+            <div class="menu-category">Appointments & Queue</div>
+            <a href="{% url 'clinic:my_appointments' %}" class="menu-item {% if request.resolver_match.url_name == 'my_appointments' %}active{% endif %}">
+                <i class="fas fa-calendar-check"></i>
+                <span>My Appointments</span>
+            </a>
             <a href="{% url 'clinic:manage_queue' %}" class="menu-item {% if request.resolver_match.url_name == 'manage_queue' %}active{% endif %}">
                 <i class="fas fa-users-rectangle"></i>
-                <span>Queue Management</span>
+                <span>Live Queue</span>
             </a>
-            <a href="{% url 'clinic:patient_lookup' %}" class="menu-item {% if request.resolver_match.url_name == 'patient_lookup' %}active{% endif %}">
-                <i class="fas fa-search"></i>
-                <span>Patient Lookup</span>
+
+            <div class="menu-category">Patients & Consultations</div>
+            <a href="{% url 'clinic:my_patients' %}" class="menu-item {% if request.resolver_match.url_name == 'my_patients' %}active{% endif %}">
+                <i class="fas fa-hospital-user"></i>
+                <span>My Patients</span>
             </a>
-            <div class="menu-category">Medical (View Only)</div>
             <a href="{% url 'clinic:view_history' %}" class="menu-item {% if request.resolver_match.url_name == 'view_history' %}active{% endif %}">
-                <i class="fas fa-file-medical"></i>
-                <span>Patient History</span>
+                <i class="fas fa-file-prescription"></i>
+                <span>Prescriptions & History</span>
             </a>
-            <a href="{% url 'clinic:lab_tests' %}" class="menu-item {% if request.resolver_match.url_name == 'lab_tests' %}active{% endif %}">
-                <i class="fas fa-vial"></i>
-                <span>Lab Tests</span>
+
+            <div class="menu-category">Diagnostics & Follow-Ups</div>
+            <a href="{% url 'clinic:lab_tests' %}" class="menu-item {% if request.resolver_match.url_name in 'lab_tests,order_lab_test,update_lab_test' %}active{% endif %}">
+                <i class="fas fa-vial-circle-check"></i>
+                <span>Lab Tests & Reports</span>
             </a>
             <a href="{% url 'clinic:view_follow_ups' %}" class="menu-item {% if request.resolver_match.url_name == 'view_follow_ups' %}active{% endif %}">
                 <i class="fas fa-notes-medical"></i>
                 <span>Follow-Ups</span>
+            </a>
+
+            <div class="menu-category">Profile & Availability</div>
+            <a href="{% url 'clinic:doctor_my_profile' %}" class="menu-item {% if request.resolver_match.url_name == 'doctor_my_profile' %}active{% endif %}">
+                <i class="fas fa-user-doctor"></i>
+                <span>My Profile & Schedule</span>
             </a>
             {% endif %}
 
             <!-- RECEPTIONIST MENU -->
             {% if user.role == 'RECEPTIONIST' %}
-            <div class="menu-category">Clinic</div>
-            <a href="{% url 'clinic:walkin_booking' %}" class="menu-item {% if request.resolver_match.url_name == 'walkin_booking' %}active{% endif %}">
-                <i class="fas fa-hospital-user"></i>
-                <span>Walk-in Booking</span>
-            </a>
+            <div class="menu-category">Patient Registration</div>
             <a href="{% url 'clinic:register_patient' %}" class="menu-item {% if request.resolver_match.url_name == 'register_patient' %}active{% endif %}">
                 <i class="fas fa-user-plus"></i>
                 <span>Register Patient</span>
             </a>
-            <a href="{% url 'clinic:patient_lookup' %}" class="menu-item {% if request.resolver_match.url_name == 'patient_lookup' %}active{% endif %}">
+            <a href="{% url 'clinic:patient_lookup' %}" class="menu-item {% if request.resolver_match.url_name in 'patient_lookup,patient_detail,edit_patient' %}active{% endif %}">
                 <i class="fas fa-search"></i>
-                <span>Patient Lookup</span>
+                <span>Search & Edit Patient</span>
             </a>
+
+            <div class="menu-category">Appointments & Booking</div>
+            <a href="{% url 'clinic:walkin_booking' %}" class="menu-item {% if request.resolver_match.url_name == 'walkin_booking' %}active{% endif %}">
+                <i class="fas fa-hospital-user"></i>
+                <span>Walk-in Booking</span>
+            </a>
+
+            <div class="menu-category">Check-in & Queue</div>
             <a href="{% url 'clinic:manage_queue' %}" class="menu-item {% if request.resolver_match.url_name == 'manage_queue' %}active{% endif %}">
                 <i class="fas fa-users-rectangle"></i>
-                <span>Queue</span>
+                <span>Queue Management</span>
             </a>
-            <div class="menu-category">Data Entry</div>
-            <a href="{% url 'clinic:view_history' %}" class="menu-item {% if request.resolver_match.url_name == 'view_history' %}active{% endif %}">
-                <i class="fas fa-file-medical"></i>
-                <span>Patient History</span>
+            <a href="{% url 'clinic:queue_display' %}" target="_blank" class="menu-item">
+                <i class="fas fa-tv"></i>
+                <span>Queue TV Screen</span>
             </a>
-            <a href="{% url 'clinic:lab_tests' %}" class="menu-item {% if request.resolver_match.url_name == 'lab_tests' %}active{% endif %}">
-                <i class="fas fa-vial"></i>
-                <span>Lab Tests</span>
-            </a>
-            <a href="{% url 'clinic:view_follow_ups' %}" class="menu-item {% if request.resolver_match.url_name == 'view_follow_ups' %}active{% endif %}">
-                <i class="fas fa-notes-medical"></i>
-                <span>Follow-Ups</span>
-            </a>
-            <div class="menu-category">Payments</div>
+
+            <div class="menu-category">Payments & Invoices</div>
             <a href="{% url 'clinic:payment_records' %}" class="menu-item {% if request.resolver_match.url_name == 'payment_records' %}active{% endif %}">
                 <i class="fas fa-file-invoice-dollar"></i>
-                <span>Verify Payments</span>
+                <span>Payments & Invoices</span>
+            </a>
+
+            <div class="menu-category">Diagnostics</div>
+            <a href="{% url 'clinic:lab_tests' %}" class="menu-item {% if request.resolver_match.url_name in 'lab_tests,order_lab_test,update_lab_test' %}active{% endif %}">
+                <i class="fas fa-vial"></i>
+                <span>Lab Tests & Reports</span>
             </a>
             {% endif %}
 
@@ -146,10 +170,6 @@
             <a href="{% url 'clinic:walkin_booking' %}" class="menu-item {% if request.resolver_match.url_name == 'walkin_booking' %}active{% endif %}">
                 <i class="fas fa-hospital-user"></i>
                 <span>Walk-in Booking</span>
-            </a>
-            <a href="{% url 'clinic:register_patient' %}" class="menu-item {% if request.resolver_match.url_name == 'register_patient' %}active{% endif %}">
-                <i class="fas fa-user-plus"></i>
-                <span>Register Patient</span>
             </a>
             <a href="{% url 'clinic:patient_lookup' %}" class="menu-item {% if request.resolver_match.url_name == 'patient_lookup' %}active{% endif %}">
                 <i class="fas fa-search"></i>

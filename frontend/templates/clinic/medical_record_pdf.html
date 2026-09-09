@@ -1,122 +1,333 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>Medical Record — {{ patient.get_full_name }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical Record & Prescription — {{ patient.get_full_name|default:patient.username }}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        @page { size: A4; margin: 40px; }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Helvetica', 'Arial', sans-serif; color: #1e293b; font-size: 13px; line-height: 1.6; }
-        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #0d9488; padding-bottom: 20px; margin-bottom: 24px; }
-        .logo { font-size: 24px; font-weight: 800; color: #0d9488; }
-        .logo-sub { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 2px; }
+        @page { size: A4 portrait; margin: 20mm; }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: #1e293b;
+            background: #f1f5f9;
+            font-size: 13.5px;
+            line-height: 1.6;
+            padding: 24px 0;
+        }
+
+        /* ═══ NO-PRINT TOP TOOLBAR ═══ */
+        .print-toolbar {
+            max-width: 800px;
+            margin: 0 auto 20px auto;
+            background: #0f172a;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2);
+        }
+        .btn-print {
+            background: #0d9488;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+        .btn-print:hover { background: #0f766e; transform: translateY(-1px); }
+        .btn-back {
+            background: #334155;
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+        .btn-back:hover { background: #475569; }
+
+        .record-card {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 48px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            border: 1px solid #e2e8f0;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 3px solid #0d9488;
+            padding-bottom: 20px;
+            margin-bottom: 24px;
+        }
+        .logo-wrap { display: flex; align-items: center; gap: 12px; }
+        .logo-icon {
+            width: 44px;
+            height: 44px;
+            background: #0d9488;
+            color: white;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+        }
+        .logo-text { font-size: 24px; font-weight: 800; color: #0f172a; line-height: 1.1; }
+        .logo-text span { color: #0d9488; }
+        .logo-sub { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px; margin-top: 4px; font-weight: 600; }
+        
         .doc-title { text-align: right; }
-        .doc-title h2 { font-size: 18px; color: #0d9488; }
-        .doc-title p { color: #64748b; font-size: 11px; }
-        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
-        .info-block { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; }
-        .info-block h3 { font-size: 10px; text-transform: uppercase; color: #64748b; letter-spacing: 1px; margin-bottom: 6px; }
-        .info-block p { font-size: 13px; margin-bottom: 2px; }
-        .info-block .name { font-weight: 700; font-size: 15px; }
-        .section { margin-bottom: 20px; }
-        .section h3 { font-size: 12px; text-transform: uppercase; color: #0d9488; letter-spacing: 1px; border-bottom: 1px solid #ccfbf1; padding-bottom: 6px; margin-bottom: 8px; }
-        .section p { font-size: 13px; white-space: pre-line; }
-        .vitals-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
-        .vital { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; text-align: center; }
-        .vital .label { font-size: 9px; text-transform: uppercase; color: #64748b; letter-spacing: 1px; }
-        .vital .value { font-weight: 700; font-size: 14px; margin-top: 4px; }
-        .footer { border-top: 1px solid #e2e8f0; padding-top: 16px; text-align: center; color: #94a3b8; font-size: 10px; margin-top: 30px; }
-        .followup-box { background: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px; padding: 12px; margin-top: 16px; }
-        .followup-box strong { color: #92400e; }
+        .doc-title h2 { font-size: 20px; color: #0d9488; font-weight: 800; letter-spacing: 0.5px; }
+        .doc-title p { color: #64748b; font-size: 12px; margin-top: 2px; }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .info-block {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 14px;
+        }
+        .info-block h3 {
+            font-size: 10px;
+            text-transform: uppercase;
+            color: #0d9488;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+            font-weight: 800;
+        }
+        .info-block p { font-size: 13px; margin-bottom: 2px; color: #334155; }
+        .info-block .name { font-weight: 800; font-size: 15px; color: #0f172a; }
+
+        .vitals-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .vital {
+            background: #f0fdfa;
+            border: 1px solid #ccfbf1;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+        }
+        .vital .label { font-size: 10px; text-transform: uppercase; color: #0d9488; font-weight: 700; letter-spacing: 0.5px; }
+        .vital .value { font-weight: 800; font-size: 15px; margin-top: 4px; color: #0f172a; }
+
+        .section {
+            margin-bottom: 20px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 16px;
+        }
+        .section h3 {
+            font-size: 11.5px;
+            text-transform: uppercase;
+            color: #0d9488;
+            letter-spacing: 1px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .section p { font-size: 13px; color: #334155; white-space: pre-line; }
+
+        .prescription-box {
+            border: 2px solid #0d9488;
+            background: #f0fdfa;
+            border-radius: 12px;
+            padding: 18px;
+            margin-bottom: 20px;
+        }
+        .prescription-box h3 {
+            font-size: 13px;
+            text-transform: uppercase;
+            color: #0d9488;
+            font-weight: 800;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .footer {
+            border-top: 1px solid #e2e8f0;
+            padding-top: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #94a3b8;
+            font-size: 11px;
+            margin-top: 30px;
+        }
+
+        @media print {
+            body { background: white; padding: 0; }
+            .print-toolbar { display: none !important; }
+            .record-card {
+                box-shadow: none;
+                border: none;
+                padding: 0;
+                max-width: 100%;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div>
-            <div class="logo">Healthcare</div>
-            <div class="logo-sub">Healthcare Management System</div>
-        </div>
-        <div class="doc-title">
-            <h2>MEDICAL RECORD</h2>
-            <p>Visit Date: {{ record.visit_date|date:"M d, Y" }}</p>
-        </div>
-    </div>
 
-    <div class="info-grid">
-        <div class="info-block">
-            <h3>Patient</h3>
-            <p class="name">{{ patient.get_full_name|default:patient.username }}</p>
-            <p>ID: {{ patient.patient_id|default:"N/A" }}</p>
-            <p>Age: {{ record.get_age_at_visit|default:"N/A" }} | {{ patient.get_gender_display|default:"" }}</p>
+    <div class="print-toolbar">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <i class="fas fa-file-waveform" style="color: #2dd4bf; font-size: 1.2rem;"></i>
+            <div>
+                <strong style="font-size: 0.95rem;">Official Medical Record & Prescription</strong>
+                <div style="font-size: 0.75rem; color: #94a3b8;">{{ patient.get_full_name|default:patient.username }} &bull; Dr. {{ doctor.get_full_name|default:doctor.username }}</div>
+            </div>
         </div>
-        <div class="info-block">
-            <h3>Doctor</h3>
-            <p class="name">Dr. {{ doctor.get_full_name|default:doctor.username }}</p>
-            <p>{{ doctor.specialization|default:"General" }}</p>
+        <div style="display: flex; gap: 10px;">
+            <a href="javascript:window.history.back()" class="btn-back">
+                <i class="fas fa-arrow-left"></i> Back
+            </a>
+            <button onclick="window.print()" class="btn-print">
+                <i class="fas fa-print"></i> Print / Save as PDF
+            </button>
         </div>
     </div>
 
-    {% if record.blood_pressure or record.temperature or record.weight or record.pulse %}
-    <div class="vitals-grid">
-        {% if record.blood_pressure %}
-        <div class="vital"><div class="label">Blood Pressure</div><div class="value">{{ record.blood_pressure }}</div></div>
+    <div class="record-card">
+        <div class="header">
+            <div class="logo-wrap">
+                <div class="logo-icon">
+                    <i class="fas fa-hospital-user"></i>
+                </div>
+                <div>
+                    <div class="logo-text">Healthcare <span>HMC</span></div>
+                    <div class="logo-sub">Healthcare Medical Complex</div>
+                </div>
+            </div>
+            <div class="doc-title">
+                <h2>CLINICAL CONSULTATION RECORD</h2>
+                <p><i class="far fa-calendar-alt"></i> Visit Date: {{ record.visit_date|date:"F d, Y" }}</p>
+            </div>
+        </div>
+
+        <div class="info-grid">
+            <div class="info-block">
+                <h3><i class="fas fa-user"></i> Patient Details</h3>
+                <p class="name">{{ patient.get_full_name|default:patient.username }}</p>
+                <p><strong>Patient ID:</strong> {{ patient.patient_id|default:"N/A" }}</p>
+                <p><strong>Phone:</strong> {{ patient.phone|default:"N/A" }}</p>
+            </div>
+            <div class="info-block">
+                <h3><i class="fas fa-user-doctor"></i> Attending Physician</h3>
+                <p class="name">Dr. {{ doctor.get_full_name|default:doctor.username }}</p>
+                <p><strong>Specialization:</strong> {{ doctor.specialization|default:"General Medicine" }}</p>
+                <p><strong>OPD Clinic:</strong> Main OPD Block</p>
+            </div>
+        </div>
+
+        {% if record.blood_pressure or record.temperature or record.weight or record.pulse %}
+        <div class="vitals-grid">
+            {% if record.blood_pressure %}
+            <div class="vital"><div class="label">Blood Pressure</div><div class="value">{{ record.blood_pressure }}</div></div>
+            {% endif %}
+            {% if record.temperature %}
+            <div class="vital"><div class="label">Temperature</div><div class="value">{{ record.temperature }}</div></div>
+            {% endif %}
+            {% if record.weight %}
+            <div class="vital"><div class="label">Weight</div><div class="value">{{ record.weight }}</div></div>
+            {% endif %}
+            {% if record.pulse %}
+            <div class="vital"><div class="label">Pulse</div><div class="value">{{ record.pulse }}</div></div>
+            {% endif %}
+        </div>
         {% endif %}
-        {% if record.temperature %}
-        <div class="vital"><div class="label">Temperature</div><div class="value">{{ record.temperature }}</div></div>
+
+        {% if record.symptoms %}
+        <div class="section">
+            <h3><i class="fas fa-notes-medical"></i> Symptoms & Chief Complaints</h3>
+            <p>{{ record.symptoms }}</p>
+        </div>
         {% endif %}
-        {% if record.weight %}
-        <div class="vital"><div class="label">Weight</div><div class="value">{{ record.weight }}</div></div>
+
+        {% if record.diagnosis %}
+        <div class="section" style="border-left: 4px solid #0d9488;">
+            <h3><i class="fas fa-stethoscope"></i> Clinical Diagnosis</h3>
+            <p style="font-weight: 700; color: #0f172a; font-size: 14px;">{{ record.diagnosis }}</p>
+        </div>
         {% endif %}
-        {% if record.pulse %}
-        <div class="vital"><div class="label">Pulse</div><div class="value">{{ record.pulse }}</div></div>
+
+        {% if record.prescription %}
+        <div class="prescription-box">
+            <h3><i class="fas fa-prescription"></i> Rx / Prescribed Medications & Regimen</h3>
+            <p style="white-space: pre-line; line-height: 1.8; font-size: 14px; font-weight: 600; color: #0f172a;">{{ record.prescription }}</p>
+        </div>
         {% endif %}
-    </div>
-    {% endif %}
 
-    {% if record.symptoms %}
-    <div class="section">
-        <h3>Symptoms</h3>
-        <p>{{ record.symptoms }}</p>
-    </div>
-    {% endif %}
+        {% if record.lab_tests_ordered %}
+        <div class="section">
+            <h3><i class="fas fa-vials"></i> Diagnostic Laboratory Tests Advised</h3>
+            <p>{{ record.lab_tests_ordered }}</p>
+        </div>
+        {% endif %}
 
-    {% if record.diagnosis %}
-    <div class="section">
-        <h3>Diagnosis</h3>
-        <p>{{ record.diagnosis }}</p>
-    </div>
-    {% endif %}
+        {% if record.notes %}
+        <div class="section">
+            <h3><i class="fas fa-clipboard-list"></i> Doctor's Advice & Clinical Instructions</h3>
+            <p>{{ record.notes }}</p>
+        </div>
+        {% endif %}
 
-    {% if record.prescription %}
-    <div class="section">
-        <h3>Prescription</h3>
-        <p>{{ record.prescription }}</p>
-    </div>
-    {% endif %}
+        {% if record.follow_up_required %}
+        <div class="section" style="background: #fffbeb; border: 1px solid #fcd34d;">
+            <h3 style="color: #92400e;"><i class="fas fa-calendar-check"></i> Follow-up Appointment</h3>
+            <p style="color: #78350f; font-weight: 700;">Advised to follow up on: {{ record.follow_up_date|date:"F d, Y" }}</p>
+        </div>
+        {% endif %}
 
-    {% if record.lab_tests_ordered %}
-    <div class="section">
-        <h3>Lab Tests Ordered</h3>
-        <p>{{ record.lab_tests_ordered }}</p>
-    </div>
-    {% endif %}
+        <div style="display: flex; justify-content: flex-end; margin-top: 30px;">
+            <div style="text-align: right; width: 220px;">
+                <div style="font-size: 11px; color: #64748b; margin-bottom: 24px;">Doctor's Signature & Stamp</div>
+                <div style="font-family: monospace; font-size: 12px; font-weight: 700; color: #0d9488; border-bottom: 1px solid #0f172a; padding-bottom: 2px;">
+                    Dr. {{ doctor.get_full_name|default:doctor.username }}
+                </div>
+            </div>
+        </div>
 
-    {% if record.notes %}
-    <div class="section">
-        <h3>Additional Notes</h3>
-        <p>{{ record.notes }}</p>
+        <div class="footer">
+            <div>Healthcare Medical Complex (HMC) &bull; Patient Information System</div>
+            <div>Generated on {{ record.visit_date|date:"M d, Y" }}</div>
+        </div>
     </div>
-    {% endif %}
 
-    {% if record.follow_up_required %}
-    <div class="followup-box">
-        <strong><i class="fas fa-calendar-check"></i> Follow-up Required:</strong> {{ record.follow_up_date|date:"M d, Y" }}
-    </div>
-    {% endif %}
-
-    <div class="footer">
-        <p>Healthcare — Medical Record for {{ patient.get_full_name|default:patient.username }}</p>
-        <p>This is a computer-generated document. Generated on {{ record.visit_date|date:"M d, Y" }}</p>
-    </div>
 </body>
 </html>

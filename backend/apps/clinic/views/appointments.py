@@ -16,17 +16,13 @@ from ..notification_service import create_notification
 
 
 def _assign_doctor_photo(doctor, photo_name):
-    """Attach a bundled doctor image to a doctor account, updating seeded defaults when needed."""
+    """Attach a bundled doctor image to a doctor account only if no photo is set."""
+    if doctor.profile_photo:
+        return
+
     image_path = Path(settings.BASE_DIR.parent, 'frontend', 'static', 'images', 'doctors', photo_name)
     if not image_path.exists():
         return
-
-    current_name = Path(doctor.profile_photo.name).name if doctor.profile_photo else None
-    if current_name == photo_name:
-        return
-
-    if doctor.profile_photo:
-        doctor.profile_photo.delete(save=False)
 
     with image_path.open('rb') as img_file:
         doctor.profile_photo.save(photo_name, ContentFile(img_file.read()), save=True)
@@ -71,16 +67,26 @@ def ensure_doctors_exist():
         if not doctor.has_usable_password() or doctor.username in {'dr_hira', 'dr_saba', 'dr_taj', 'dr_idrees', 'dr_ahmed'}:
             doctor.set_password('doctor123')
             doctor.save(update_fields=['password'])
-
         _assign_doctor_photo(doctor, spec.get('photo', 'doctor1.jpg'))
+
+        # Ensure weekly schedule (Mon-Sat 9am-5pm) exists
+        for day in range(6):  # Monday=0 to Saturday=5
+            DoctorSchedule.objects.get_or_create(
+                doctor=doctor,
+                day_of_week=day,
+                defaults={
+                    'start_time': '09:00:00',
+                    'end_time': '17:00:00',
+                    'is_available': True
+                }
+            )
 
     return User.objects.filter(role='DOCTOR').order_by('id')
 
 
 def estimate_wait_time(doctor, appointment_date):
     """
-    Estimate wait time based on doctor's queue.
-    Uses 15 min per patient as average consultation time.
+    Estimate wait time for a patient based on active queue length for this doctor today.
     Can be enhanced with actual timing data later.
     """
     avg_time = 15  # minutes per patient
@@ -115,21 +121,32 @@ def book_appointment(request):
                           .values_list('specialization', flat=True)
                           .distinct().order_by('specialization'))
 
+    preselected_doctor_id = request.GET.get('doctor_id', '')
+
     return render(request, 'clinic/book_appointment.html', {
         'form': form,
         'doctors': doctors,
         'specializations': specializations,
         'today': date.today(),
+        'preselected_doctor_id': preselected_doctor_id,
     })
 
 
 @login_required
 def my_appointments(request):
-    appointments = Appointment.objects.filter(
-        patient=request.user
-    ).select_related('doctor', 'queue_token', 'payment')
-
     today = date.today()
+    
+    if request.user.role == 'DOCTOR':
+        appointments = Appointment.objects.filter(
+            doctor=request.user
+        ).select_related('patient', 'queue_token', 'payment').order_by('-appointment_date', 'time_slot')
+    elif request.user.role in ('ADMIN', 'RECEPTIONIST'):
+        appointments = Appointment.objects.all().select_related('patient', 'doctor', 'queue_token', 'payment').order_by('-appointment_date', 'time_slot')
+    else:
+        appointments = Appointment.objects.filter(
+            patient=request.user
+        ).select_related('doctor', 'queue_token', 'payment').order_by('-appointment_date', 'time_slot')
+
     stats = {
         'total': appointments.count(),
         'completed': appointments.filter(status='COMPLETED').count(),
@@ -137,11 +154,13 @@ def my_appointments(request):
             status='CONFIRMED', appointment_date__gte=today
         ).count(),
         'pending': appointments.filter(status='PENDING').count(),
+        'today': appointments.filter(appointment_date=today).count(),
     }
 
     return render(request, 'clinic/my_appointments.html', {
         'appointments': appointments,
         'stats': stats,
+        'today': today,
     })
 
 
@@ -168,17 +187,35 @@ def get_doctor_slots(request):
         is_available=True
     )
 
-    if not schedules.exists():
-        return JsonResponse({'slots': [], 'message': 'Doctor is not available on this day.'})
-
-    # Generate 30-min slots from schedule
+    # Generate 30-min slots
     slots = []
-    for sched in schedules:
-        current = datetime.combine(selected_date, sched.start_time)
-        end = datetime.combine(selected_date, sched.end_time)
+    if schedules.exists():
+        for sched in schedules:
+            current = datetime.combine(selected_date, sched.start_time)
+            end = datetime.combine(selected_date, sched.end_time)
+            while current < end:
+                time_str = current.strftime('%H:%M')
+                is_booked = Appointment.objects.filter(
+                    doctor_id=doctor_id,
+                    appointment_date=selected_date,
+                    time_slot=time_str,
+                    status__in=['PENDING', 'CONFIRMED']
+                ).exists()
+                slots.append({
+                    'time': time_str,
+                    'display': current.strftime('%I:%M %p'),
+                    'available': not is_booked
+                })
+                current += timedelta(minutes=30)
+    else:
+        # Default 09:00 AM - 05:00 PM standard clinic slots
+        from datetime import time as dt_time
+        start_t = dt_time(9, 0)
+        end_t = dt_time(17, 0)
+        current = datetime.combine(selected_date, start_t)
+        end = datetime.combine(selected_date, end_t)
         while current < end:
             time_str = current.strftime('%H:%M')
-            # Check if slot is already booked
             is_booked = Appointment.objects.filter(
                 doctor_id=doctor_id,
                 appointment_date=selected_date,
@@ -197,16 +234,24 @@ def get_doctor_slots(request):
 
 @login_required
 def cancel_appointment(request, appointment_id):
-    appointment = get_object_or_404(
-        Appointment, id=appointment_id, patient=request.user
-    )
+    if request.user.role in ('ADMIN', 'RECEPTIONIST'):
+        appointment = get_object_or_404(Appointment, id=appointment_id)
+    else:
+        appointment = get_object_or_404(
+            Appointment, id=appointment_id, patient=request.user
+        )
     if request.method == 'POST':
         if appointment.status in ('PENDING', 'CONFIRMED'):
             appointment.status = 'CANCELLED'
             appointment.save()
+            if hasattr(appointment, 'queue_token'):
+                appointment.queue_token.is_active = False
+                appointment.queue_token.save()
             messages.success(request, "Appointment cancelled.")
         else:
             messages.error(request, "This appointment cannot be cancelled.")
+        if request.user.role in ('ADMIN', 'RECEPTIONIST'):
+            return redirect('dashboard')
         return redirect('clinic:my_appointments')
     return render(request, 'clinic/cancel_appointment.html', {
         'appointment': appointment
@@ -327,14 +372,19 @@ def reject_appointment(request, appointment_id):
 
 @login_required
 def reschedule_appointment(request, appointment_id):
-    """Patient reschedules their appointment to a new date/time."""
-    appointment = get_object_or_404(
-        Appointment, id=appointment_id, patient=request.user
-    )
+    """Patient, Receptionist, or Admin reschedules appointment to a new date/time."""
+    if request.user.role in ('ADMIN', 'RECEPTIONIST'):
+        appointment = get_object_or_404(Appointment, id=appointment_id)
+    else:
+        appointment = get_object_or_404(
+            Appointment, id=appointment_id, patient=request.user
+        )
 
     # Can only reschedule PENDING or CONFIRMED appointments
     if appointment.status not in ('PENDING', 'CONFIRMED'):
         messages.error(request, "This appointment cannot be rescheduled.")
+        if request.user.role in ('ADMIN', 'RECEPTIONIST'):
+            return redirect('dashboard')
         return redirect('clinic:my_appointments')
 
     if request.method == 'POST':
@@ -379,10 +429,8 @@ def reschedule_appointment(request, appointment_id):
         appointment.reason = request.POST.get('reason', appointment.reason)
         appointment.save()
 
-        messages.success(
-            request,
-            f"Appointment rescheduled to {parsed_date.strftime('%B %d, %Y')} at {new_time}."
-        )
+        if request.user.role in ('ADMIN', 'RECEPTIONIST'):
+            return redirect('dashboard')
         return redirect('clinic:my_appointments')
 
     return render(request, 'clinic/reschedule_appointment.html', {

@@ -4,6 +4,18 @@
 
 {% block content %}
 <!-- Stats -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <div>
+        <h2 style="margin: 0; font-size: 1.4rem; font-weight: 800; color: var(--gray-900);">Lab Diagnostic Records</h2>
+        <div style="font-size: 0.85rem; color: var(--gray-500);">Track ordered tests, upload reports, and transfer results to doctors</div>
+    </div>
+    {% if user.role == 'ADMIN' or user.role == 'RECEPTIONIST' %}
+    <a href="{% url 'clinic:order_lab_test' %}" class="btn-primary btn-sm" style="text-decoration: none; padding: 10px 18px;">
+        <i class="fas fa-plus"></i> Order / Add Lab Test
+    </a>
+    {% endif %}
+</div>
+
 <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr);">
     <div class="stat-card animate-fade-in-up delay-100">
         <div class="stat-icon blue"><i class="fas fa-vial"></i></div>
@@ -62,7 +74,7 @@
                 <tr>
                     <th>Test Name</th>
                     {% if user.role != 'PATIENT' %}<th>Patient</th>{% endif %}
-                    {% if user.role == 'ADMIN' %}<th>Doctor</th>{% endif %}
+                    {% if user.role != 'PATIENT' %}<th>Assigned Doctor</th>{% endif %}
                     <th>Category</th>
                     <th>Cost</th>
                     <th>Status</th>
@@ -90,8 +102,8 @@
                         </div>
                     </td>
                     {% endif %}
-                    {% if user.role == 'ADMIN' %}
-                    <td>{% if test.doctor %}Dr. {{ test.doctor.get_full_name|default:test.doctor.username }}{% else %}—{% endif %}</td>
+                    {% if user.role != 'PATIENT' %}
+                    <td>{% if test.doctor %}Dr. {{ test.doctor.get_full_name|default:test.doctor.username }} <small style="color: var(--primary-600);">({{ test.doctor.specialization }})</small>{% else %}—{% endif %}</td>
                     {% endif %}
                     <td>{{ test.test_category|default:"—" }}</td>
                     <td style="font-weight: 600; color: var(--success);">PKR {{ test.cost }}</td>

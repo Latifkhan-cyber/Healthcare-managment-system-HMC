@@ -13,21 +13,14 @@ from pathlib import Path
 
 
 def _assign_staff_photo(staff):
-    """Attach a default portrait for doctor staff accounts, updating seeded defaults when needed."""
-    if staff.role != 'DOCTOR':
+    """Attach a default portrait for doctor staff accounts only if no photo is currently set."""
+    if staff.role != 'DOCTOR' or staff.profile_photo:
         return
 
     photo_name = 'doctor_male.jpg' if (staff.gender == 'MALE') else 'doctor1.jpg'
     image_path = Path(settings.BASE_DIR.parent, 'frontend', 'static', 'images', 'doctors', photo_name)
     if not image_path.exists():
         return
-
-    current_name = Path(staff.profile_photo.name).name if staff.profile_photo else None
-    if current_name == photo_name:
-        return
-
-    if staff.profile_photo:
-        staff.profile_photo.delete(save=False)
 
     with image_path.open('rb') as img_file:
         staff.profile_photo.save(photo_name, ContentFile(img_file.read()), save=True)
@@ -126,51 +119,172 @@ def dashboard(request):
         ).order_by('-created_at')[:5]
         return render(request, 'accounts/admin_dashboard.html', context)
 
-    elif request.user.role == 'DOCTOR':
-        from backend.apps.clinic.models import Appointment, QueueToken
-        context['pending_count'] = Appointment.objects.filter(
-            doctor=request.user,
-            appointment_date=today,
-            status='CONFIRMED'
-        ).count()
-        context['completed_count'] = Appointment.objects.filter(
-            doctor=request.user,
-            appointment_date=today,
-            status='COMPLETED'
-        ).count()
-        context['upcoming_appointments'] = Appointment.objects.filter(
-            doctor=request.user,
-            appointment_date=today,
-            status='CONFIRMED'
-        ).order_by('time_slot')[:5]
-        context['active_token'] = QueueToken.objects.filter(
-            appointment__doctor=request.user,
+    elif request.user.role == 'RECEPTIONIST':
+        from backend.apps.clinic.models import Appointment, Payment, QueueToken
+        from backend.apps.clinic.views.appointments import ensure_doctors_exist
+        
+        # Today's metrics
+        appts_today = Appointment.objects.filter(
+            appointment_date=today
+        ).select_related('patient', 'doctor', 'queue_token', 'payment').order_by('time_slot')
+
+        context['appointments_today'] = appts_today
+        context['appointments_today_count'] = appts_today.count()
+        context['waiting_count'] = QueueToken.objects.filter(
+            appointment__appointment_date=today,
             is_active=True
-        ).order_by('token_number').first()
+        ).count()
+        context['checked_in_count'] = appts_today.filter(
+            queue_token__isnull=False,
+            queue_token__is_active=True
+        ).count()
+        context['completed_today_count'] = appts_today.filter(status='COMPLETED').count()
+        context['pending_payments_count'] = Payment.objects.filter(status='PENDING').count()
+        
+        # Pending Online Payments awaiting verification (JazzCash / EasyPaisa / Bank)
+        pending_online = Payment.objects.filter(
+            status='PENDING'
+        ).exclude(method='CASH').select_related(
+            'appointment__patient', 'appointment__doctor'
+        ).order_by('-created_at')
+        context['pending_online_payments'] = pending_online
+        context['pending_online_count'] = pending_online.count()
+
+        # Pending Cash on Arrival Payments
+        pending_cash = Payment.objects.filter(
+            status='PENDING', method='CASH'
+        ).select_related(
+            'appointment__patient', 'appointment__doctor'
+        ).order_by('-created_at')
+        context['pending_cash_payments'] = pending_cash
+        context['pending_cash_count'] = pending_cash.count()
+
+        # Queue live for today
+        context['live_queue'] = QueueToken.objects.filter(
+            appointment__appointment_date=today,
+            is_active=True
+        ).select_related('appointment__patient', 'appointment__doctor').order_by('token_number')[:10]
+
+        # Doctors available today
+        context['doctors'] = ensure_doctors_exist()
+        return render(request, 'accounts/receptionist_dashboard.html', context)
+
+    elif request.user.role == 'DOCTOR':
+        from backend.apps.clinic.models import Appointment, QueueToken, PatientHistory, LabTest
+        
+        # Doctor's appointments today
+        today_appts = Appointment.objects.filter(
+            doctor=request.user,
+            appointment_date=today
+        ).select_related('patient', 'queue_token', 'payment').order_by('time_slot')
+
+        context['today_appointments'] = today_appts
+        context['today_appointments_count'] = today_appts.count()
+        context['pending_count'] = QueueToken.objects.filter(
+            appointment__doctor=request.user,
+            appointment__appointment_date=today,
+            is_active=True
+        ).count()
+        context['completed_count'] = today_appts.filter(status='COMPLETED').count()
+        context['upcoming_appointments'] = today_appts.filter(
+            status__in=['PENDING', 'CONFIRMED']
+        ).order_by('time_slot')[:8]
+        
+        # Doctor's active token & waiting queue
+        doctor_tokens = QueueToken.objects.filter(
+            appointment__doctor=request.user,
+            appointment__appointment_date=today,
+            is_active=True
+        ).select_related('appointment__patient').order_by('token_number')
+        
+        context['active_token'] = doctor_tokens.first()
+        context['doctor_queue'] = doctor_tokens
+        context['doctor_queue_count'] = doctor_tokens.count()
+        
+        # Recent consultations
+        context['recent_consultations'] = PatientHistory.objects.filter(
+            doctor=request.user
+        ).select_related('patient', 'appointment').order_by('-visit_date', '-id')[:5]
+
+        # Pending lab tests requested by this doctor
+        context['pending_lab_tests_count'] = LabTest.objects.filter(
+            doctor=request.user,
+            status__in=['ORDERED', 'SAMPLE_COLLECTED', 'PROCESSING']
+        ).count()
+
         return render(request, 'accounts/doctor_dashboard.html', context)
 
     else:
-        from backend.apps.clinic.models import Appointment, PatientHistory, QueueToken
-        context['upcoming_count'] = Appointment.objects.filter(
+        # Patient Dashboard
+        from backend.apps.clinic.models import Appointment, PatientHistory, QueueToken, LabTest, Payment
+        
+        # Upcoming appointments
+        patient_upcoming = Appointment.objects.filter(
             patient=request.user,
-            status='CONFIRMED',
-            appointment_date__gte=today
-        ).count()
-        context['prescriptions_count'] = PatientHistory.objects.filter(
-            patient=request.user
-        ).count()
-        # Real queue position
+            appointment_date__gte=today,
+            status__in=['PENDING', 'CONFIRMED']
+        ).select_related('doctor', 'queue_token', 'payment').order_by('appointment_date', 'time_slot')
+
+        context['upcoming_appointments'] = patient_upcoming
+        context['upcoming_count'] = patient_upcoming.count()
+        context['next_appointment'] = patient_upcoming.first()
+        
+        # Total counts
+        context['prescriptions_count'] = PatientHistory.objects.filter(patient=request.user).count()
+        context['lab_tests_count'] = LabTest.objects.filter(patient=request.user).count()
+        context['completed_visits_count'] = Appointment.objects.filter(patient=request.user, status='COMPLETED').count()
+
+        # Real-time Queue Tracking for Today
         active_token = QueueToken.objects.filter(
             appointment__patient=request.user,
+            appointment__appointment_date=today,
             is_active=True
-        ).select_related('appointment').first()
+        ).select_related('appointment__doctor').first()
+
         if active_token:
+            doctor = active_token.appointment.doctor
+            current_serving = QueueToken.objects.filter(
+                appointment__doctor=doctor,
+                appointment__appointment_date=today,
+                is_active=True
+            ).order_by('token_number').first()
+
+            ahead_count = QueueToken.objects.filter(
+                appointment__doctor=doctor,
+                appointment__appointment_date=today,
+                is_active=True,
+                token_number__lt=active_token.token_number
+            ).count()
+
+            context['active_token'] = active_token
             context['queue_position'] = active_token.token_number
-            context['wait_time'] = active_token.estimated_wait_minutes
-            context['queue_doctor'] = active_token.appointment.doctor
+            context['current_serving_token'] = current_serving.token_number if current_serving else active_token.token_number
+            context['patients_ahead'] = ahead_count
+            context['wait_time'] = active_token.estimated_wait_minutes or (ahead_count * 15)
+            context['queue_doctor'] = doctor
         else:
+            context['active_token'] = None
             context['queue_position'] = None
+            context['current_serving_token'] = None
+            context['patients_ahead'] = 0
             context['wait_time'] = None
+            context['queue_doctor'] = None
+
+        # Recent Prescription / Medical Record
+        context['recent_prescription'] = PatientHistory.objects.filter(
+            patient=request.user
+        ).select_related('doctor', 'appointment').order_by('-visit_date', '-id').first()
+
+        # Recent Lab Report
+        context['recent_lab_test'] = LabTest.objects.filter(
+            patient=request.user
+        ).select_related('doctor').order_by('-ordered_date', '-id').first()
+
+        # Recent Payment
+        context['recent_payment'] = Payment.objects.filter(
+            appointment__patient=request.user
+        ).select_related('appointment__doctor').order_by('-created_at').first()
+
         return render(request, 'accounts/patient_dashboard.html', context)
 
 

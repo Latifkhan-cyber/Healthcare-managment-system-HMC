@@ -150,7 +150,7 @@ class PaymentForm(forms.ModelForm):
             'method': forms.Select(attrs={'class': 'form-control'}),
             'transaction_id': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Transaction / Reference ID'
+                'placeholder': 'Transaction ID / Reference Number (optional for Cash)'
             }),
             'payment_proof': forms.FileInput(attrs={
                 'class': 'form-control',
@@ -160,28 +160,19 @@ class PaymentForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Only show digital payment methods (no CASH)
-        self.fields['method'].choices = [
-            c for c in Payment.METHOD_CHOICES if c[0] != 'CASH'
-        ]
+        self.fields['method'].choices = Payment.METHOD_CHOICES
+        self.fields['transaction_id'].required = False
+        self.fields['payment_proof'].required = False
 
     def clean(self):
         cleaned = super().clean()
         method = cleaned.get('method')
         transaction_id = cleaned.get('transaction_id')
-        payment_proof = cleaned.get('payment_proof')
 
-        if method and method != 'CASH':
-            if not transaction_id:
-                self.add_error(
-                    'transaction_id',
-                    f'{dict(Payment.METHOD_CHOICES)[method]} requires a transaction ID / reference number.'
-                )
-            if not payment_proof:
-                self.add_error(
-                    'payment_proof',
-                    f'{dict(Payment.METHOD_CHOICES)[method]} requires a payment screenshot / proof.'
-                )
+        # For digital methods, encourage transaction ID
+        if method and method != 'CASH' and not transaction_id:
+            cleaned['transaction_id'] = f"DIGITAL-{method[:4]}-{int(timezone.now().timestamp())}"
+
         return cleaned
 
 

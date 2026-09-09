@@ -1,0 +1,537 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block page_title %}Receptionist Dashboard{% endblock %}
+{% block page_subtitle %}Front Desk Operations, Patient Check-in, and Queue Control{% endblock %}
+
+{% block content %}
+<!-- ═══ 4 KEY METRICS ═══ -->
+<div class="stats-grid">
+    <!-- 1. Today's Appointments -->
+    <div class="stat-card animate-fade-in-up delay-100">
+        <div class="stat-icon blue"><i class="fas fa-calendar-day"></i></div>
+        <div class="stat-info">
+            <div class="stat-value">{{ appointments_today_count }}</div>
+            <div class="stat-label">Today's Appointments</div>
+        </div>
+    </div>
+
+    <!-- 2. Waiting Patients -->
+    <div class="stat-card animate-fade-in-up delay-200">
+        <div class="stat-icon orange"><i class="fas fa-user-clock"></i></div>
+        <div class="stat-info">
+            <div class="stat-value">{{ waiting_count }}</div>
+            <div class="stat-label">Waiting in Queue</div>
+        </div>
+    </div>
+
+    <!-- 3. Checked-in Patients -->
+    <div class="stat-card animate-fade-in-up delay-300">
+        <div class="stat-icon cyan"><i class="fas fa-clipboard-check"></i></div>
+        <div class="stat-info">
+            <div class="stat-value">{{ checked_in_count }}</div>
+            <div class="stat-label">Checked-In Today</div>
+        </div>
+    </div>
+
+    <!-- 4. Completed Appointments -->
+    <div class="stat-card animate-fade-in-up delay-400">
+        <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
+        <div class="stat-info">
+            <div class="stat-value">{{ completed_today_count }}</div>
+            <div class="stat-label">Completed Today</div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ QUICK ACTIONS BAR ═══ -->
+<div class="dashboard-grid" style="grid-template-columns: repeat(4, 1fr); margin: 24px 0;">
+    <a href="{% url 'clinic:register_patient' %}" class="card animate-fade-in-up delay-100" style="text-decoration: none; padding: 20px;">
+        <div class="icon-wrap" style="background: #eff6ff; color: #2563eb; width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-bottom: 12px;">
+            <i class="fas fa-user-plus"></i>
+        </div>
+        <h3 style="margin: 0 0 4px; font-size: 1rem; color: var(--gray-900);">Register Patient</h3>
+        <p style="margin: 0; font-size: 0.8rem; color: var(--gray-500);">Create new patient profile & ID</p>
+    </a>
+
+    <a href="{% url 'clinic:walkin_booking' %}" class="card animate-fade-in-up delay-200" style="text-decoration: none; padding: 20px;">
+        <div class="icon-wrap" style="background: var(--success-bg); color: var(--success); width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-bottom: 12px;">
+            <i class="fas fa-hospital-user"></i>
+        </div>
+        <h3 style="margin: 0 0 4px; font-size: 1rem; color: var(--gray-900);">Walk-in Booking</h3>
+        <p style="margin: 0; font-size: 0.8rem; color: var(--gray-500);">Instant booking, payment & token</p>
+    </a>
+
+    <a href="{% url 'clinic:patient_lookup' %}" class="card animate-fade-in-up delay-300" style="text-decoration: none; padding: 20px;">
+        <div class="icon-wrap" style="background: #fdf2f8; color: #db2777; width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-bottom: 12px;">
+            <i class="fas fa-search"></i>
+        </div>
+        <h3 style="margin: 0 0 4px; font-size: 1rem; color: var(--gray-900);">Search & Edit Patient</h3>
+        <p style="margin: 0; font-size: 0.8rem; color: var(--gray-500);">Find by ID, phone, or name</p>
+    </a>
+
+    <a href="{% url 'clinic:payment_records' %}" class="card animate-fade-in-up delay-400" style="text-decoration: none; padding: 20px;">
+        <div class="icon-wrap" style="background: var(--warning-bg); color: var(--warning); width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-bottom: 12px;">
+            <i class="fas fa-file-invoice-dollar"></i>
+        </div>
+        <h3 style="margin: 0 0 4px; font-size: 1rem; color: var(--gray-900);">Payments & Invoices</h3>
+        <p style="margin: 0; font-size: 0.8rem; color: var(--gray-500);">Verify receipts & print invoices</p>
+    </a>
+</div>
+
+<!-- ═══ ONLINE PAYMENTS AWAITING VERIFICATION (JAZZCASH / EASYPAISA / BANK) ═══ -->
+{% if pending_online_count > 0 %}
+<div class="data-card animate-fade-in-up delay-100" style="margin-bottom: 28px; border: 2px solid #3b82f6; box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.15);">
+    <div class="data-card-header" style="background: linear-gradient(135deg, #eff6ff, #dbeafe); padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="background: #2563eb; color: white; width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem;">
+                <i class="fas fa-receipt"></i>
+            </div>
+            <div>
+                <h3 style="margin: 0; color: #1e3a8a; font-size: 1.1rem; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+                    Online Payments Awaiting Verification
+                    <span class="badge" style="background: #ef4444; color: white; font-size: 0.75rem; padding: 2px 8px; border-radius: 999px;">{{ pending_online_count }} PENDING</span>
+                </h3>
+                <div style="font-size: 0.8rem; color: #3b82f6;">Cross-check transaction IDs / payment slips and confirm patient bookings</div>
+            </div>
+        </div>
+        <a href="{% url 'clinic:payment_records' %}" class="btn-secondary btn-sm" style="text-decoration: none;">
+            All Payments <i class="fas fa-arrow-right"></i>
+        </a>
+    </div>
+
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr style="background: #f8fafc;">
+                    <th>Patient</th>
+                    <th>Doctor & Date</th>
+                    <th>Amount</th>
+                    <th>Method & Channel</th>
+                    <th>Transaction ID / Reference</th>
+                    <th>Payment Slip / Proof</th>
+                    <th>Verification Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in pending_online_payments %}
+                <tr style="transition: background 0.2s;">
+                    <!-- Patient -->
+                    <td>
+                        <div style="font-weight: 700; color: var(--gray-900);">
+                            {{ p.appointment.patient.get_full_name|default:p.appointment.patient.username }}
+                        </div>
+                        <div style="font-size: 0.76rem; color: var(--gray-500); display: flex; gap: 6px; align-items: center;">
+                            <span style="background: var(--gray-100); padding: 1px 6px; border-radius: 4px; font-weight: 600;">ID: {{ p.appointment.patient.patient_id|default:"N/A" }}</span>
+                            <span><i class="fas fa-phone" style="font-size: 0.65rem;"></i> {{ p.appointment.patient.phone|default:"No phone" }}</span>
+                        </div>
+                    </td>
+
+                    <!-- Doctor & Date -->
+                    <td>
+                        <div style="font-weight: 600; color: var(--gray-800);">Dr. {{ p.appointment.doctor.get_full_name|default:p.appointment.doctor.username }}</div>
+                        <div style="font-size: 0.76rem; color: var(--gray-600);">
+                            <i class="far fa-calendar-alt"></i> {{ p.appointment.appointment_date|date:"M d, Y" }} at {{ p.appointment.time_slot }}
+                        </div>
+                    </td>
+
+                    <!-- Amount -->
+                    <td>
+                        <span style="font-weight: 800; font-size: 1rem; color: var(--success-text);">PKR {{ p.amount }}</span>
+                    </td>
+
+                    <!-- Method -->
+                    <td>
+                        {% if p.method == 'JAZZCASH' %}
+                            <span class="badge" style="background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; font-weight: 700; font-size: 0.78rem; padding: 4px 8px; border-radius: 6px;">
+                                <i class="fas fa-mobile-screen-button"></i> JazzCash
+                            </span>
+                        {% elif p.method == 'EASYPAISA' %}
+                            <span class="badge" style="background: #ecfdf5; color: #059669; border: 1px solid #6ee7b7; font-weight: 700; font-size: 0.78rem; padding: 4px 8px; border-radius: 6px;">
+                                <i class="fas fa-mobile-screen-button"></i> EasyPaisa
+                            </span>
+                        {% elif p.method == 'BANK' %}
+                            <span class="badge" style="background: #eff6ff; color: #2563eb; border: 1px solid #93c5fd; font-weight: 700; font-size: 0.78rem; padding: 4px 8px; border-radius: 6px;">
+                                <i class="fas fa-building-columns"></i> Bank Transfer
+                            </span>
+                        {% else %}
+                            <span class="badge" style="background: var(--gray-100); color: var(--gray-700); font-weight: 700; font-size: 0.78rem;">
+                                {{ p.get_method_display }}
+                            </span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Transaction ID -->
+                    <td>
+                        {% if p.transaction_id %}
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <code style="background: #f1f5f9; padding: 4px 8px; border-radius: 6px; font-weight: 800; font-size: 0.85rem; color: #0f172a; letter-spacing: 0.5px;">{{ p.transaction_id }}</code>
+                                <button type="button" onclick="navigator.clipboard.writeText('{{ p.transaction_id }}'); alert('Transaction ID copied: {{ p.transaction_id }}');" class="btn-icon" title="Copy TID" style="font-size: 0.75rem; width: 24px; height: 24px;">
+                                    <i class="far fa-copy"></i>
+                                </button>
+                            </div>
+                        {% else %}
+                            <span style="font-size: 0.78rem; color: var(--gray-400); font-style: italic;">Not provided</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Proof Slip Preview -->
+                    <td>
+                        {% if p.payment_proof %}
+                            <button type="button" onclick="openProofModal('{{ p.payment_proof.url }}', '{{ p.appointment.patient.get_full_name|escapejs }}', 'PKR {{ p.amount }}', '{{ p.get_method_display|escapejs }}', '{{ p.transaction_id|default:"N/A"|escapejs }}')" class="btn-secondary btn-sm" style="padding: 4px 8px; font-size: 0.78rem; display: flex; align-items: center; gap: 4px; text-decoration: none;">
+                                <i class="fas fa-image" style="color: #3b82f6;"></i> View Slip
+                            </button>
+                        {% else %}
+                            <span style="font-size: 0.76rem; color: var(--gray-400);">No slip uploaded</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Actions -->
+                    <td>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <!-- Confirm Button -->
+                            <a href="{% url 'clinic:verify_payment' p.id %}?next={{ request.path }}" onclick="return confirm('Confirm payment of PKR {{ p.amount }} for {{ p.appointment.patient.get_full_name|escapejs }}?')" class="btn-primary btn-sm" style="background: #16a34a; border-color: #16a34a; text-decoration: none; padding: 5px 12px; font-size: 0.8rem; font-weight: 700;">
+                                <i class="fas fa-check"></i> Confirm Payment
+                            </a>
+
+                            <!-- Reject Button -->
+                            <button type="button" onclick="openRejectModal('{% url 'clinic:reject_payment' p.id %}', '{{ p.appointment.patient.get_full_name|escapejs }}', 'PKR {{ p.amount }}')" class="btn-secondary btn-sm" style="color: #dc2626; border-color: #fca5a5; padding: 5px 10px; font-size: 0.8rem;">
+                                <i class="fas fa-times"></i> Reject
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- ═══ TODAY'S APPOINTMENTS & PATIENT CHECK-IN TABLE ═══ -->
+<div class="data-card animate-fade-in-up delay-200" style="margin-bottom: 28px;">
+    <div class="data-card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h3 style="margin: 0 0 2px;">Today's Appointments & Patient Check-In</h3>
+            <div style="font-size: 0.82rem; color: var(--gray-500);">Confirm patient arrival, issue tokens, or reschedule</div>
+        </div>
+        <div style="display: flex; gap: 8px;">
+            <a href="{% url 'clinic:walkin_booking' %}" class="btn-primary btn-sm" style="text-decoration: none;">
+                <i class="fas fa-plus"></i> New Walk-in
+            </a>
+            <a href="{% url 'clinic:queue_display' %}" target="_blank" class="btn-secondary btn-sm" style="text-decoration: none;">
+                <i class="fas fa-tv"></i> Open TV Display
+            </a>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Patient ID</th>
+                    <th>Patient Name</th>
+                    <th>Doctor / Dept</th>
+                    <th>Time Slot</th>
+                    <th>Arrival & Queue Token</th>
+                    <th>Payment Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for appt in appointments_today %}
+                <tr>
+                    <!-- Patient ID -->
+                    <td>
+                        <a href="{% url 'clinic:patient_detail' appt.patient.patient_id|default:'none' %}" style="text-decoration: none; font-weight: 700; color: var(--primary-700); background: var(--primary-50); padding: 3px 8px; border-radius: 6px; font-size: 0.8rem;">
+                            {{ appt.patient.patient_id|default:appt.patient.username }}
+                        </a>
+                    </td>
+
+                    <!-- Patient Name & Phone -->
+                    <td>
+                        <div style="font-weight: 700; color: var(--gray-900);">
+                            {{ appt.patient.get_full_name|default:appt.patient.username }}
+                        </div>
+                        <div style="font-size: 0.76rem; color: var(--gray-500);">
+                            <i class="fas fa-phone" style="font-size: 0.7rem;"></i> {{ appt.patient.phone|default:"No phone" }}
+                        </div>
+                    </td>
+
+                    <!-- Doctor & Dept -->
+                    <td>
+                        <div style="font-weight: 600; color: var(--gray-800);">Dr. {{ appt.doctor.get_full_name|default:appt.doctor.username }}</div>
+                        <div style="font-size: 0.76rem; color: var(--primary-600);">{{ appt.doctor.specialization|default:"General Medicine" }}</div>
+                    </td>
+
+                    <!-- Time Slot -->
+                    <td>
+                        <span style="font-weight: 600; font-size: 0.85rem; color: var(--gray-700);">
+                            <i class="far fa-clock" style="color: var(--gray-400);"></i> {{ appt.time_slot }}
+                        </span>
+                    </td>
+
+                    <!-- Arrival & Queue Token -->
+                    <td>
+                        {% if appt.queue_token and appt.queue_token.is_active %}
+                            <span class="badge" style="background: #ecfdf5; color: #065f46; padding: 4px 10px; border-radius: 999px; font-weight: 700; font-size: 0.8rem;">
+                                <i class="fas fa-ticket"></i> Token #{{ appt.queue_token.token_number }}
+                            </span>
+                        {% elif appt.status == 'COMPLETED' %}
+                            <span class="badge" style="background: #f1f5f9; color: #475569; padding: 4px 10px; border-radius: 999px; font-size: 0.78rem;">
+                                <i class="fas fa-check-double"></i> Completed
+                            </span>
+                        {% elif appt.status == 'CANCELLED' %}
+                            <span class="badge" style="background: #fef2f2; color: #991b1b; padding: 4px 10px; border-radius: 999px; font-size: 0.78rem;">
+                                Cancelled / No-show
+                            </span>
+                        {% else %}
+                            <a href="{% url 'clinic:checkin_patient' appt.id %}" class="btn-primary btn-sm" style="text-decoration: none; padding: 4px 10px; font-size: 0.78rem;">
+                                <i class="fas fa-user-check"></i> Check-in & Token
+                            </a>
+                        {% endif %}
+                    </td>
+
+                    <!-- Payment Status -->
+                    <td>
+                        {% if appt.payment %}
+                            {% if appt.payment.status == 'PAID' %}
+                                <span class="status-badge status-paid" style="font-size: 0.72rem;">PAID (PKR {{ appt.payment.amount }})</span>
+                            {% elif appt.payment.status == 'PENDING' %}
+                                <a href="{% url 'clinic:verify_payment' appt.payment.id %}" class="status-badge status-pending" style="font-size: 0.72rem; text-decoration: none;" title="Click to verify">
+                                    PENDING (Verify)
+                                </a>
+                            {% else %}
+                                <span class="status-badge status-cancelled" style="font-size: 0.72rem;">{{ appt.payment.status }}</span>
+                            {% endif %}
+                        {% else %}
+                            <span style="font-size: 0.78rem; color: var(--gray-400);">No invoice</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Actions -->
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <!-- Detail -->
+                            <a href="{% url 'clinic:appointment_detail' appt.id %}" class="btn-icon" title="View Appointment Details">
+                                <i class="fas fa-eye"></i>
+                            </a>
+
+                            <!-- Invoice Download -->
+                            {% if appt.payment and appt.payment.status == 'PAID' %}
+                            <a href="{% url 'clinic:payment_receipt' appt.payment.id %}" class="btn-icon" style="color: var(--success);" title="Download Invoice / Receipt PDF">
+                                <i class="fas fa-file-invoice-dollar"></i>
+                            </a>
+                            {% endif %}
+
+                            <!-- Reschedule -->
+                            {% if appt.status in 'PENDING,CONFIRMED' %}
+                            <a href="{% url 'clinic:reschedule_appointment' appt.id %}" class="btn-icon" style="color: var(--info);" title="Reschedule Date/Time">
+                                <i class="fas fa-calendar-alt"></i>
+                            </a>
+                            <a href="{% url 'clinic:mark_noshow' appt.id %}" onclick="return confirm('Mark this patient as No-Show / Absent?')" class="btn-icon danger" title="Mark as No-Show">
+                                <i class="fas fa-user-xmark"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7">
+                        <div class="empty-state" style="padding: 36px 20px; text-align: center;">
+                            <div class="empty-icon" style="font-size: 2rem; color: var(--gray-400); margin-bottom: 8px;">
+                                <i class="fas fa-calendar-check"></i>
+                            </div>
+                            <h4 style="margin: 0 0 4px; color: var(--gray-800);">No appointments scheduled for today</h4>
+                            <p style="margin: 0; color: var(--gray-500); font-size: 0.85rem;">Use <strong>Walk-in Booking</strong> to register arriving patients immediately.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ═══ TWO COLUMN BOTTOM SECTION: LIVE QUEUE & DOCTOR AVAILABILITY ═══ -->
+<div style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 24px;">
+    <!-- Live Queue Monitor -->
+    <div class="data-card animate-fade-in-up delay-300">
+        <div class="data-card-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0;">Live Waiting Queue ({{ live_queue.count }})</h3>
+            <a href="{% url 'clinic:manage_queue' %}" class="btn-ghost btn-sm" style="text-decoration: none;">
+                Manage Full Queue <i class="fas fa-arrow-right"></i>
+            </a>
+        </div>
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Token</th>
+                        <th>Patient</th>
+                        <th>Doctor</th>
+                        <th>Est. Wait</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in live_queue %}
+                    <tr>
+                        <td>
+                            <span style="font-weight: 800; font-size: 0.95rem; color: var(--primary-700);">#{{ t.token_number }}</span>
+                        </td>
+                        <td>
+                            <span style="font-weight: 600;">{{ t.appointment.patient.get_full_name|default:t.appointment.patient.username }}</span>
+                        </td>
+                        <td>Dr. {{ t.appointment.doctor.get_full_name|default:t.appointment.doctor.username }}</td>
+                        <td>{{ t.estimated_wait_minutes }} mins</td>
+                        <td>
+                            <a href="{% url 'clinic:emergency_priority' t.id %}" class="btn-secondary btn-sm" style="text-decoration: none; padding: 3px 8px; font-size: 0.72rem; color: #dc2626;" title="Move to front for emergency">
+                                <i class="fas fa-truck-medical"></i> Priority
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" style="text-align: center; color: var(--gray-400); padding: 24px;">
+                            No patients currently in live queue
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Doctor Availability Quick Lookup -->
+    <div class="data-card animate-fade-in-up delay-300">
+        <div class="data-card-header">
+            <h3 style="margin: 0;">Doctor Availability & OPD Roster</h3>
+        </div>
+        <div style="padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+            {% for doc in doctors %}
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: #f8fafc; border-radius: 10px; border: 1px solid var(--gray-200);">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="width: 34px; height: 34px; border-radius: 8px; background: var(--primary-50); color: var(--primary-700); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.8rem;">
+                        {{ doc.username|slice:":1"|upper }}
+                    </div>
+                    <div>
+                        <div style="font-weight: 700; font-size: 0.88rem; color: var(--gray-900);">Dr. {{ doc.get_full_name|default:doc.username }}</div>
+                        <div style="font-size: 0.75rem; color: var(--primary-600);">{{ doc.specialization|default:"General Practice" }}</div>
+                    </div>
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-weight: 700; font-size: 0.85rem; color: var(--success-text);">PKR {{ doc.consultation_fee }}</div>
+                    <a href="{% url 'clinic:walkin_booking' %}?doctor_id={{ doc.id }}" style="font-size: 0.72rem; color: var(--primary-600); text-decoration: none; font-weight: 600;">
+                        Book <i class="fas fa-chevron-right"></i>
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- ═══ PAYMENT PROOF PREVIEW MODAL ═══ -->
+<div id="proofModal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.75); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(4px); padding: 20px;">
+    <div style="background: white; border-radius: 16px; width: 100%; max-width: 550px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); animation: zoomIn 0.2s ease;">
+        <div style="padding: 16px 20px; background: #f8fafc; border-bottom: 1px solid var(--gray-200); display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-weight: 800; font-size: 1.05rem; color: var(--gray-900);">
+                <i class="fas fa-file-invoice" style="color: var(--primary-600); margin-right: 6px;"></i> Payment Slip Proof
+            </div>
+            <button type="button" onclick="closeProofModal()" style="background: none; border: none; font-size: 1.25rem; cursor: pointer; color: var(--gray-400);">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div style="padding: 20px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; background: #f1f5f9; padding: 12px; border-radius: 10px; font-size: 0.85rem;">
+                <div><span style="color: var(--gray-500);">Patient:</span> <strong id="modalPatient"></strong></div>
+                <div><span style="color: var(--gray-500);">Amount:</span> <strong id="modalAmount" style="color: var(--success-text);"></strong></div>
+                <div><span style="color: var(--gray-500);">Channel:</span> <strong id="modalChannel"></strong></div>
+                <div><span style="color: var(--gray-500);">TID:</span> <code id="modalTid" style="font-weight: 800; color: #1e3a8a;"></code></div>
+            </div>
+            <div style="text-align: center; max-height: 380px; overflow-y: auto; border: 1px dashed var(--gray-300); border-radius: 10px; padding: 10px; background: #fafafa;">
+                <img id="modalProofImg" src="" alt="Payment Proof" style="max-width: 100%; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);" />
+            </div>
+        </div>
+        <div style="padding: 12px 20px; background: #f8fafc; border-top: 1px solid var(--gray-200); display: flex; justify-content: flex-end; gap: 10px;">
+            <a id="modalOpenFullBtn" href="" target="_blank" class="btn-secondary btn-sm" style="text-decoration: none;">
+                <i class="fas fa-arrow-up-right-from-square"></i> Open Full Image
+            </a>
+            <button type="button" onclick="closeProofModal()" class="btn-primary btn-sm">
+                Close
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ REJECT PAYMENT MODAL ═══ -->
+<div id="rejectModal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.75); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(4px); padding: 20px;">
+    <div style="background: white; border-radius: 16px; width: 100%; max-width: 480px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);">
+        <form id="rejectForm" method="post" action="">
+            {% csrf_token %}
+            <div style="padding: 16px 20px; background: #fef2f2; border-bottom: 1px solid #fee2e2; display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-weight: 800; font-size: 1.05rem; color: #991b1b;">
+                    <i class="fas fa-exclamation-triangle" style="margin-right: 6px;"></i> Reject Online Payment
+                </div>
+                <button type="button" onclick="closeRejectModal()" style="background: none; border: none; font-size: 1.25rem; cursor: pointer; color: var(--gray-400);">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div style="padding: 20px;">
+                <p style="margin: 0 0 14px; font-size: 0.9rem; color: var(--gray-700);">
+                    Are you sure you want to reject payment of <strong id="rejectModalAmount"></strong> for <strong id="rejectModalPatient"></strong>?
+                </p>
+                <div style="margin-bottom: 12px;">
+                    <label style="display: block; font-size: 0.8rem; font-weight: 700; color: var(--gray-700); margin-bottom: 6px;">
+                        Reason for rejection (sent to patient):
+                    </label>
+                    <select name="reason" class="form-control" style="width: 100%; margin-bottom: 8px;">
+                        <option value="Invalid transaction ID / Reference number">Invalid transaction ID / Reference number</option>
+                        <option value="Incorrect amount paid / Fee discrepancy">Incorrect amount paid / Fee discrepancy</option>
+                        <option value="Payment proof unreadable / blurry screenshot">Payment proof unreadable / blurry screenshot</option>
+                        <option value="Payment not received in clinic merchant account">Payment not received in clinic merchant account</option>
+                        <option value="Duplicate submission / Fake receipt">Duplicate submission / Fake receipt</option>
+                    </select>
+                </div>
+            </div>
+            <div style="padding: 12px 20px; background: #f8fafc; border-top: 1px solid var(--gray-200); display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" onclick="closeRejectModal()" class="btn-secondary btn-sm">Cancel</button>
+                <button type="submit" class="btn-primary btn-sm" style="background: #dc2626; border-color: #dc2626;">
+                    <i class="fas fa-times"></i> Confirm Rejection
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openProofModal(imgUrl, patientName, amount, channel, tid) {
+    document.getElementById('modalProofImg').src = imgUrl;
+    document.getElementById('modalOpenFullBtn').href = imgUrl;
+    document.getElementById('modalPatient').innerText = patientName;
+    document.getElementById('modalAmount').innerText = amount;
+    document.getElementById('modalChannel').innerText = channel;
+    document.getElementById('modalTid').innerText = tid;
+    var modal = document.getElementById('proofModal');
+    modal.style.display = 'flex';
+}
+
+function closeProofModal() {
+    document.getElementById('proofModal').style.display = 'none';
+}
+
+function openRejectModal(actionUrl, patientName, amount) {
+    document.getElementById('rejectForm').action = actionUrl;
+    document.getElementById('rejectModalPatient').innerText = patientName;
+    document.getElementById('rejectModalAmount').innerText = amount;
+    var modal = document.getElementById('rejectModal');
+    modal.style.display = 'flex';
+}
+
+function closeRejectModal() {
+    document.getElementById('rejectModal').style.display = 'none';
+}
+</script>
+{% endblock %}

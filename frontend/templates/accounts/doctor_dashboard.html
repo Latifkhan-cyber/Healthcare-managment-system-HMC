@@ -1,71 +1,152 @@
 {% extends 'base/base.html' %}
 {% block page_title %}Doctor Dashboard{% endblock %}
-{% block page_subtitle %}Manage your patients and queue for today{% endblock %}
+{% block page_subtitle %}Welcome back, Dr. {{ user.get_full_name|default:user.username }}{% endblock %}
 
 {% block content %}
-<!-- Stats -->
-<div class="stats-grid">
+<!-- Quick Stat Cards -->
+<div class="stats-grid" style="margin-bottom: 24px;">
     <div class="stat-card animate-fade-in-up delay-100">
-        <div class="stat-icon blue"><i class="fas fa-user-clock"></i></div>
+        <div class="stat-icon blue"><i class="fas fa-calendar-day"></i></div>
         <div class="stat-info">
-            <div class="stat-value">{{ pending_count|default:"0" }}</div>
-            <div class="stat-label">Waiting Patients</div>
+            <div class="stat-value">{{ today_appointments_count|default:"0" }}</div>
+            <div class="stat-label">Today's Appointments</div>
         </div>
     </div>
     <div class="stat-card animate-fade-in-up delay-200">
-        <div class="stat-icon green"><i class="fas fa-user-check"></i></div>
+        <div class="stat-icon orange"><i class="fas fa-user-clock"></i></div>
         <div class="stat-info">
-            <div class="stat-value">{{ completed_count|default:"0" }}</div>
-            <div class="stat-label">Seen Today</div>
+            <div class="stat-value">{{ pending_count|default:"0" }}</div>
+            <div class="stat-label">Waiting in Queue</div>
         </div>
     </div>
     <div class="stat-card animate-fade-in-up delay-300">
-        <div class="stat-icon orange"><i class="fas fa-hourglass-start"></i></div>
+        <div class="stat-icon green"><i class="fas fa-user-check"></i></div>
         <div class="stat-info">
-            <div class="stat-value">~15m</div>
-            <div class="stat-label">Avg Consult Time</div>
+            <div class="stat-value">{{ completed_count|default:"0" }}</div>
+            <div class="stat-label">Completed Consultations</div>
+        </div>
+    </div>
+    <div class="stat-card animate-fade-in-up delay-400">
+        <div class="stat-icon purple"><i class="fas fa-vial"></i></div>
+        <div class="stat-info">
+            <div class="stat-value">{{ pending_lab_tests_count|default:"0" }}</div>
+            <div class="stat-label">Pending Lab Reports</div>
         </div>
     </div>
 </div>
 
-<div class="grid-2">
-    <!-- Upcoming Appointments -->
-    <div class="data-card animate-fade-in-up delay-200">
-        <div class="data-card-header">
-            <h3>Upcoming Appointments</h3>
+<!-- Doctor Quick Action Shortcuts -->
+<div class="data-card animate-fade-in-up delay-150" style="margin-bottom: 24px; padding: 18px 24px;">
+    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 44px; height: 44px; border-radius: 12px; background: var(--primary-100); color: var(--primary-700); display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                <i class="fas fa-stethoscope"></i>
+            </div>
+            <div>
+                <h4 style="margin: 0; font-size: 1rem; font-weight: 700;">Doctor Workspace</h4>
+                <p style="margin: 0; font-size: 0.8rem; color: var(--gray-500);">Quick shortcuts to manage consultations and patient care</p>
+            </div>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
             <a href="{% url 'clinic:manage_queue' %}" class="btn-primary btn-sm">
-                <i class="fas fa-play"></i> Start Serving
+                <i class="fas fa-users-rectangle"></i> Live Queue
             </a>
+            <a href="{% url 'clinic:my_appointments' %}" class="btn-secondary btn-sm">
+                <i class="fas fa-calendar-check"></i> My Appointments
+            </a>
+            <a href="{% url 'clinic:my_patients' %}" class="btn-secondary btn-sm">
+                <i class="fas fa-hospital-user"></i> My Patients
+            </a>
+            <a href="{% url 'clinic:order_lab_test' %}" class="btn-secondary btn-sm">
+                <i class="fas fa-vial-circle-check"></i> Order Lab Test
+            </a>
+            <a href="{% url 'clinic:doctor_my_profile' %}" class="btn-secondary btn-sm">
+                <i class="fas fa-user-gear"></i> Profile & Schedule
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="grid-2" style="margin-bottom: 24px;">
+    <!-- Active Token / Next Patient -->
+    <div class="now-serving animate-fade-in-up delay-200" style="display: flex; flex-direction: column; justify-content: center; min-height: 280px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+            <span style="text-transform: uppercase; font-size: 0.75rem; letter-spacing: 1px; opacity: 0.85; font-weight: 700;">Current Queue Position</span>
+            <span class="badge" style="background: rgba(255,255,255,0.2); color: white; border: none; font-size: 0.75rem;">Active</span>
+        </div>
+        
+        {% if active_token %}
+            <div class="token-number" style="font-size: 3.5rem; line-height: 1; margin: 8px 0;">#{{ active_token.token_number|stringformat:"02d" }}</div>
+            <div class="patient-name" style="font-size: 1.25rem; font-weight: 700;">
+                {{ active_token.appointment.patient.get_full_name|default:active_token.appointment.patient.username }}
+            </div>
+            <div style="font-size: 0.85rem; opacity: 0.85; margin-top: 4px;">
+                Patient ID: <strong>{{ active_token.appointment.patient.patient_id|default:"N/A" }}</strong> · {{ active_token.appointment.patient.get_gender_display|default:"Patient" }}
+            </div>
+            {% if active_token.appointment.reason %}
+            <div style="margin-top: 10px; font-size: 0.82rem; background: rgba(255,255,255,0.12); padding: 6px 12px; border-radius: 8px; font-style: italic;">
+                "{{ active_token.appointment.reason }}"
+            </div>
+            {% endif %}
+            
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <a href="{% url 'clinic:record_consultation' active_token.appointment.id %}" class="btn-primary" style="flex: 2; background: white; color: var(--primary-700); justify-content: center; font-weight: 700;">
+                    <i class="fas fa-stethoscope"></i> Start Consultation
+                </a>
+                <a href="{% url 'clinic:skip_patient' active_token.id %}" class="btn-secondary" style="flex: 1; background: rgba(255,255,255,0.2); color: white; border-color: rgba(255,255,255,0.3); justify-content: center;" title="Skip to next patient">
+                    <i class="fas fa-forward-step"></i> Skip
+                </a>
+            </div>
+        {% else %}
+            <div style="padding: 24px 0; opacity: 0.85; text-align: center;">
+                <i class="fas fa-coffee" style="font-size: 3rem; margin-bottom: 12px; display: block;"></i>
+                <div style="font-size: 1.2rem; font-weight: 700;">No Patient in Waiting Queue</div>
+                <p style="font-size: 0.85rem; margin-top: 6px; opacity: 0.8;">All scheduled patients have been attended to or checked-in queue is clear.</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Live Waiting Queue -->
+    <div class="data-card animate-fade-in-up delay-250">
+        <div class="data-card-header">
+            <h3><i class="fas fa-users-line" style="color: var(--primary-600); margin-right: 8px;"></i> Live Waiting Queue</h3>
+            <a href="{% url 'clinic:manage_queue' %}" class="btn-ghost btn-sm">Full Queue <i class="fas fa-arrow-right"></i></a>
         </div>
         <div class="table-responsive">
             <table>
                 <thead>
                     <tr>
+                        <th>Token</th>
                         <th>Patient</th>
-                        <th>Time</th>
                         <th>Status</th>
+                        <th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for appt in upcoming_appointments %}
+                    {% for token in doctor_queue %}
                     <tr>
                         <td>
-                            <div style="display: flex; align-items: center; gap: 10px;">
-                                <div style="width: 32px; height: 32px; border-radius: 8px; background: var(--primary-100); color: var(--primary-700); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 700;">
-                                    {{ appt.patient.username|slice:":1"|upper }}
-                                </div>
-                                <span style="font-weight: 600;">{{ appt.patient.get_full_name|default:appt.patient.username }}</span>
-                            </div>
+                            <span style="font-weight: 800; color: var(--primary-700); background: var(--primary-50); padding: 3px 8px; border-radius: 6px;">#{{ token.token_number|stringformat:"02d" }}</span>
                         </td>
-                        <td>{{ appt.time_slot }}</td>
-                        <td><span class="status-badge status-{{ appt.status|lower }}">{{ appt.get_status_display }}</span></td>
+                        <td>
+                            <div style="font-weight: 600;">{{ token.appointment.patient.get_full_name|default:token.appointment.patient.username }}</div>
+                            <div style="font-size: 0.72rem; color: var(--gray-500);">ID: {{ token.appointment.patient.patient_id|default:"N/A" }}</div>
+                        </td>
+                        <td>
+                            <span class="status-badge status-confirmed">Waiting</span>
+                        </td>
+                        <td>
+                            <a href="{% url 'clinic:record_consultation' token.appointment.id %}" class="btn-primary btn-sm" style="padding: 4px 10px; font-size: 0.75rem;">
+                                <i class="fas fa-stethoscope"></i> Consult
+                            </a>
+                        </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="3">
+                        <td colspan="4">
                             <div class="empty-state" style="padding: 30px;">
-                                <div class="empty-icon"><i class="fas fa-calendar-times"></i></div>
-                                <p>No upcoming appointments</p>
+                                <div class="empty-icon"><i class="fas fa-mug-hot"></i></div>
+                                <p>No patients currently waiting in queue</p>
                             </div>
                         </td>
                     </tr>
@@ -74,23 +155,80 @@
             </table>
         </div>
     </div>
+</div>
 
-    <!-- Now Serving -->
-    <div class="now-serving animate-fade-in-up delay-300">
-        <h3>Now Serving</h3>
-        {% if active_token %}
-            <div class="token-number">{{ active_token.token_number|stringformat:"02d" }}</div>
-            <div class="patient-name">{{ active_token.appointment.patient.get_full_name|default:active_token.appointment.patient.username }}</div>
-            <a href="{% url 'clinic:serve_patient' active_token.id %}" class="btn-primary" style="width: 100%; background: white; color: var(--primary-700); justify-content: center; margin-top: 20px;">
-                <i class="fas fa-stethoscope"></i> Start Consultation
-            </a>
-        {% else %}
-            <div style="padding: 20px 0; opacity: 0.7;">
-                <i class="fas fa-mug-hot" style="font-size: 2.5rem; margin-bottom: 12px; display: block;"></i>
-                <div style="font-size: 1.1rem; font-weight: 600;">No active patient</div>
-                <p style="opacity: 0.6; font-size: 0.85rem; margin-top: 6px;">The queue is currently empty</p>
-            </div>
-        {% endif %}
+<!-- Today's Schedule Table -->
+<div class="data-card animate-fade-in-up delay-300">
+    <div class="data-card-header">
+        <h3><i class="fas fa-calendar-day" style="color: var(--primary-600); margin-right: 8px;"></i> Today's Appointment Schedule</h3>
+        <a href="{% url 'clinic:my_appointments' %}" class="btn-ghost btn-sm">View All <i class="fas fa-arrow-right"></i></a>
+    </div>
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Time Slot</th>
+                    <th>Token</th>
+                    <th>Patient</th>
+                    <th>Contact</th>
+                    <th>Reason / Health Concern</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for appt in today_appointments %}
+                <tr>
+                    <td style="font-weight: 700; color: var(--gray-700);">
+                        <i class="far fa-clock" style="color: var(--primary-500); margin-right: 4px;"></i> {{ appt.time_slot|time:"h:i A" }}
+                    </td>
+                    <td>
+                        {% if appt.queue_token %}
+                            <span style="font-weight: 800; color: var(--primary-700); background: var(--primary-50); padding: 3px 8px; border-radius: 6px;">#{{ appt.queue_token.token_number|stringformat:"02d" }}</span>
+                        {% else %}
+                            <span style="color: var(--gray-400);">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div style="font-weight: 600;">{{ appt.patient.get_full_name|default:appt.patient.username }}</div>
+                        <div style="font-size: 0.72rem; color: var(--gray-500);">ID: {{ appt.patient.patient_id|default:"N/A" }}</div>
+                    </td>
+                    <td>{{ appt.patient.phone|default:"—" }}</td>
+                    <td style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                        {{ appt.reason|default:"Routine Consultation" }}
+                    </td>
+                    <td>
+                        <span class="status-badge status-{{ appt.status|lower }}">{{ appt.get_status_display }}</span>
+                    </td>
+                    <td>
+                        <div style="display: flex; gap: 6px;">
+                            {% if appt.status != 'COMPLETED' and appt.status != 'CANCELLED' %}
+                                <a href="{% url 'clinic:record_consultation' appt.id %}" class="btn-primary btn-sm" title="Start Consultation">
+                                    <i class="fas fa-stethoscope"></i> Consult
+                                </a>
+                            {% else %}
+                                <a href="{% url 'clinic:appointment_detail' appt.id %}" class="btn-ghost btn-sm" title="View Details">
+                                    <i class="fas fa-eye"></i> Details
+                                </a>
+                            {% endif %}
+                            <a href="{% url 'clinic:patient_detail' appt.patient.patient_id|default:appt.patient.id %}" class="btn-icon info" title="Patient Medical History">
+                                <i class="fas fa-file-medical"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7">
+                        <div class="empty-state" style="padding: 30px;">
+                            <div class="empty-icon"><i class="fas fa-calendar-check"></i></div>
+                            <p>No appointments booked for today</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
 {% endblock %}

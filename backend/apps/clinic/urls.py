@@ -74,13 +74,23 @@ urlpatterns = [
 
     # Lab Tests
     path('lab-tests/', views.lab_tests, name='lab_tests'),
+    path('lab-tests/order/', views.order_lab_test, name='order_lab_test'),
     path('lab-tests/<int:test_id>/update/', views.update_lab_test, name='update_lab_test'),
 
-    # Patient Lookup
+    # Patient Management & Check-in
     path('patient-lookup/', views.patient_lookup, name='patient_lookup'),
+    path('my-patients/', views.my_patients, name='my_patients'),
     path('patient/register/', views.register_patient, name='register_patient'),
     path('patient/<str:patient_id>/', views.patient_detail, name='patient_detail'),
+    path('patient/<str:patient_id>/edit/', views.edit_patient, name='edit_patient'),
+    path('appointment/<int:appointment_id>/checkin/', views.checkin_patient, name='checkin_patient'),
+    path('appointment/<int:appointment_id>/noshow/', views.mark_noshow, name='mark_noshow'),
+    path('queue/skip/<int:token_id>/', views.skip_patient, name='skip_patient'),
 
-    # Record Consultation (Admin)
-    path('admin/record-consultation/<int:appointment_id>/', views.record_consultation, name='record_consultation'),
+    # Doctor Profile & Schedule
+    path('doctor/profile/', views.doctor_my_profile, name='doctor_my_profile'),
+
+    # Record Consultation
+    path('consultation/<int:appointment_id>/', views.record_consultation, name='record_consultation'),
+    path('admin/record-consultation/<int:appointment_id>/', views.record_consultation, name='admin_record_consultation'),
 ]
