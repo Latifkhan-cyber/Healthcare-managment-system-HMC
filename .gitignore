@@ -45,3 +45,5 @@ local_settings.py
 *.pdf
 Screenshots*/
 Healthcare_Management_System_Thesis.docx
+diagrams/
+
