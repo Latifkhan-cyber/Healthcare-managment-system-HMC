@@ -178,3 +178,53 @@ def record_consultation(request, appointment_id):
         'past_history': past_history,
         'available_test_categories': available_test_categories,
     })
+
+
+@login_required
+def print_patient_medical_file(request, patient_id):
+    """Generate a comprehensive single-patient medical record dossier / PDF."""
+    from django.db.models import Q
+    patient = User.objects.filter(
+        Q(patient_id__iexact=patient_id) |
+        Q(username__iexact=patient_id) |
+        Q(id=int(patient_id) if patient_id.isdigit() else -1),
+        role='PATIENT'
+    ).first()
+
+    if not patient:
+        patient = get_object_or_404(User, patient_id=patient_id, role='PATIENT')
+
+    # Security / Access Control: Patients can only print their own record
+    if request.user.role == 'PATIENT' and request.user != patient:
+        messages.error(request, "Access denied. You can only view and print your own medical record.")
+        return redirect('dashboard')
+
+    # Fetch all clinical records strictly for this single individual patient
+    histories = PatientHistory.objects.filter(
+        patient=patient
+    ).select_related('doctor', 'appointment').order_by('-visit_date', '-id')
+
+    lab_tests = LabTest.objects.filter(
+        patient=patient
+    ).select_related('doctor', 'history').order_by('-ordered_date', '-id')
+
+    appointments = Appointment.objects.filter(
+        patient=patient
+    ).select_related('doctor', 'payment').order_by('-appointment_date', '-id')
+
+    latest_record = histories.first()
+    primary_doctor = latest_record.doctor if latest_record else (
+        appointments.first().doctor if appointments.exists() else None
+    )
+
+    context = {
+        'patient': patient,
+        'histories': histories,
+        'lab_tests': lab_tests,
+        'appointments': appointments,
+        'latest_record': latest_record,
+        'primary_doctor': primary_doctor,
+        'generated_date': date.today(),
+    }
+
+    return render(request, 'clinic/patient_medical_file_pdf.html', context)

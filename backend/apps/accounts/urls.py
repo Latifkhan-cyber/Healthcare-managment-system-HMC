@@ -6,8 +6,11 @@ urlpatterns = [
     path('', views.home, name='home'),
     path('dashboard/', views.dashboard, name='dashboard'),
     path('login/', views.login_view, name='login'),
+    path('accounts/login/', views.login_view),
     path('signup/', views.signup_view, name='signup'),
+    path('accounts/signup/', views.signup_view),
     path('logout/', views.logout_view, name='logout'),
+    path('accounts/logout/', views.logout_view),
 
     # Staff Management (Admin)
     path('staff/', views.manage_staff, name='manage_staff'),

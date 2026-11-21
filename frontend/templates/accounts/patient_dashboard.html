@@ -76,11 +76,11 @@
             </div>
         </div>
         <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-            <a href="{% url 'clinic:book_appointment' %}" class="btn-primary btn-sm">
-                <i class="fas fa-calendar-plus"></i> Book Appointment
+            <a href="{% url 'clinic:print_patient_medical_file' user.patient_id|default:user.id %}" target="_blank" class="btn-primary btn-sm" style="background: #0d9488; border-color: #0d9488;">
+                <i class="fas fa-file-pdf"></i> Download Medical Record (PDF)
             </a>
-            <a href="{% url 'clinic:public_doctor_search' %}" class="btn-secondary btn-sm">
-                <i class="fas fa-user-md"></i> Find Doctor
+            <a href="{% url 'clinic:book_appointment' %}" class="btn-secondary btn-sm">
+                <i class="fas fa-calendar-plus"></i> Book Appointment
             </a>
             <a href="{% url 'clinic:view_history' %}" class="btn-secondary btn-sm">
                 <i class="fas fa-file-medical"></i> Medical Records

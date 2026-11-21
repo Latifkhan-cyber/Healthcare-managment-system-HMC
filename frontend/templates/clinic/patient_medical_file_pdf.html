@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Official Medical Record — {{ patient.get_full_name|default:patient.username }} ({{ patient.patient_id|default:"N/A" }})</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 15mm 15mm 15mm 15mm;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: #0f172a;
+            background: #f1f5f9;
+            font-size: 12.5px;
+            line-height: 1.5;
+            padding: 24px 0;
+        }
+
+        /* ═══ NO-PRINT TOP ACTION BAR ═══ */
+        .print-toolbar {
+            max-width: 850px;
+            margin: 0 auto 20px auto;
+            background: #0f172a;
+            color: white;
+            padding: 14px 24px;
+            border-radius: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.25);
+        }
+        .btn-print {
+            background: #0d9488;
+            color: white;
+            border: none;
+            padding: 10px 22px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.92rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(13, 148, 136, 0.3);
+            transition: all 0.2s;
+        }
+        .btn-print:hover { background: #0f766e; transform: translateY(-1px); }
+        .btn-back {
+            background: #334155;
+            color: #f8fafc;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.88rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+        .btn-back:hover { background: #475569; }
+
+        /* ═══ MAIN MEDICAL FILE CONTAINER ═══ */
+        .medical-file-card {
+            max-width: 850px;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 10px 35px rgba(0,0,0,0.08);
+            border: 1px solid #e2e8f0;
+        }
+
+        /* ═══ HEADER & LETTERHEAD ═══ */
+        .hospital-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 3px solid #0d9488;
+            padding-bottom: 20px;
+            margin-bottom: 24px;
+        }
+        .logo-box {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .logo-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #0d9488, #0f766e);
+            color: white;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 4px 12px rgba(13, 148, 136, 0.25);
+        }
+        .hospital-title {
+            font-size: 22px;
+            font-weight: 800;
+            color: #0f172a;
+            letter-spacing: -0.02em;
+        }
+        .hospital-title span { color: #0d9488; }
+        .hospital-meta {
+            font-size: 11px;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            margin-top: 2px;
+            font-weight: 600;
+        }
+
+        .doc-heading {
+            text-align: right;
+        }
+        .doc-heading h1 {
+            font-size: 18px;
+            color: #0d9488;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+        }
+        .doc-heading .doc-ref {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: #64748b;
+            margin-top: 4px;
+        }
+
+        /* ═══ PATIENT PROFILE BANNER ═══ */
+        .patient-banner {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 18px 20px;
+            margin-bottom: 24px;
+            display: grid;
+            grid-template-columns: 2fr 1.5fr 1fr;
+            gap: 16px;
+        }
+        .banner-col h4 {
+            font-size: 10px;
+            text-transform: uppercase;
+            color: #0d9488;
+            letter-spacing: 1px;
+            font-weight: 800;
+            margin-bottom: 6px;
+        }
+        .patient-name {
+            font-size: 17px;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 4px;
+        }
+        .patient-badge {
+            display: inline-block;
+            background: #0d9488;
+            color: white;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 6px;
+        }
+        .detail-row {
+            font-size: 12px;
+            color: #334155;
+            margin-bottom: 3px;
+        }
+        .detail-row strong {
+            color: #475569;
+            font-weight: 600;
+        }
+
+        /* ═══ SECTION STYLES ═══ */
+        .section-title {
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #0f172a;
+            font-weight: 800;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1.5px solid #e2e8f0;
+            padding-bottom: 6px;
+        }
+        .section-title i {
+            color: #0d9488;
+        }
+
+        /* ═══ ENCOUNTER CARDS ═══ */
+        .encounter-card {
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 12px;
+            padding: 18px;
+            margin-bottom: 18px;
+            page-break-inside: avoid;
+        }
+        .encounter-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f1f5f9;
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+        .encounter-date {
+            font-weight: 700;
+            color: #0f172a;
+            font-size: 13px;
+        }
+        .encounter-doctor {
+            font-size: 12px;
+            color: #0d9488;
+            font-weight: 600;
+        }
+
+        .vitals-strip {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .vital-box {
+            background: #f0fdfa;
+            border: 1px solid #ccfbf1;
+            border-radius: 6px;
+            padding: 6px 8px;
+            text-align: center;
+        }
+        .vital-box .v-label {
+            font-size: 9.5px;
+            text-transform: uppercase;
+            color: #0d9488;
+            font-weight: 700;
+        }
+        .vital-box .v-val {
+            font-weight: 800;
+            font-size: 13px;
+            color: #0f172a;
+            margin-top: 2px;
+        }
+
+        .clinical-block {
+            margin-bottom: 10px;
+        }
+        .clinical-block .cb-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: #475569;
+            text-transform: uppercase;
+            margin-bottom: 2px;
+        }
+        .clinical-block .cb-val {
+            font-size: 12.5px;
+            color: #1e293b;
+            background: #f8fafc;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border-left: 3px solid #0d9488;
+        }
+
+        .rx-box {
+            background: #f0fdfa;
+            border: 1.5px solid #0d9488;
+            border-radius: 8px;
+            padding: 12px 14px;
+            margin-top: 10px;
+        }
+        .rx-box .rx-title {
+            font-size: 11.5px;
+            font-weight: 800;
+            color: #0d9488;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .rx-box .rx-content {
+            font-family: inherit;
+            font-size: 12.5px;
+            font-weight: 600;
+            color: #0f172a;
+            white-space: pre-line;
+            line-height: 1.6;
+        }
+
+        /* ═══ LAB TESTS TABLE ═══ */
+        .lab-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            font-size: 12px;
+        }
+        .lab-table th {
+            background: #f1f5f9;
+            color: #334155;
+            font-weight: 700;
+            text-align: left;
+            padding: 8px 10px;
+            border: 1px solid #e2e8f0;
+            text-transform: uppercase;
+            font-size: 10px;
+        }
+        .lab-table td {
+            padding: 8px 10px;
+            border: 1px solid #e2e8f0;
+            color: #334155;
+        }
+        .lab-status-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .status-completed { background: #dcfce7; color: #166534; }
+        .status-pending { background: #fef9c3; color: #854d0e; }
+
+        /* ═══ SIGNATURE BLOCK ═══ */
+        .signature-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-top: 36px;
+            padding-top: 16px;
+            border-top: 1px solid #e2e8f0;
+            page-break-inside: avoid;
+        }
+        .sign-box {
+            text-align: center;
+            width: 200px;
+        }
+        .sign-line {
+            border-bottom: 1px solid #0f172a;
+            margin-bottom: 6px;
+            height: 40px;
+        }
+        .sign-label {
+            font-size: 10px;
+            color: #64748b;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        /* ═══ FOOTER ═══ */
+        .file-footer {
+            margin-top: 24px;
+            padding-top: 12px;
+            border-top: 1px dashed #cbd5e1;
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: #94a3b8;
+        }
+
+        /* ═══ PRINT STYLES ═══ */
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            .print-toolbar {
+                display: none !important;
+            }
+            .medical-file-card {
+                box-shadow: none;
+                border: none;
+                padding: 0;
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Print / Action Toolbar -->
+    <div class="print-toolbar">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <i class="fas fa-file-waveform" style="color: #2dd4bf; font-size: 1.4rem;"></i>
+            <div>
+                <strong style="font-size: 1rem;">Official Single-Patient Medical Record</strong>
+                <div style="font-size: 0.8rem; color: #94a3b8;">
+                    Patient: {{ patient.get_full_name|default:patient.username }} ({{ patient.patient_id|default:"N/A" }})
+                </div>
+            </div>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <a href="javascript:window.history.back()" class="btn-back">
+                <i class="fas fa-arrow-left"></i> Back
+            </a>
+            <button onclick="window.print()" class="btn-print">
+                <i class="fas fa-print"></i> Print / Save as PDF
+            </button>
+        </div>
+    </div>
+
+    <!-- Printable Medical Record Document -->
+    <div class="medical-file-card">
+        
+        <!-- Header -->
+        <div class="hospital-header">
+            <div class="logo-box">
+                <div class="logo-icon">
+                    <i class="fas fa-hospital-user"></i>
+                </div>
+                <div>
+                    <div class="hospital-title">Healthcare <span>HMC</span></div>
+                    <div class="hospital-meta">Healthcare Medical Complex &bull; Clinical Health Record</div>
+                </div>
+            </div>
+            <div class="doc-heading">
+                <h1>PATIENT MEDICAL RECORD</h1>
+                <div class="doc-ref">DOC-REF: HMC-{{ patient.patient_id|default:patient.id }}-{{ generated_date|date:"Ymd" }}</div>
+                <div style="font-size: 11px; color: #64748b; margin-top: 2px;">Issue Date: {{ generated_date|date:"F d, Y" }}</div>
+            </div>
+        </div>
+
+        <!-- Single Patient Summary Profile -->
+        <div class="patient-banner">
+            <div class="banner-col">
+                <h4>Patient Information</h4>
+                <div class="patient-name">{{ patient.get_full_name|default:patient.username }}</div>
+                <div class="detail-row"><strong>Registration ID:</strong> <span class="patient-badge">{{ patient.patient_id|default:"N/A" }}</span></div>
+                <div class="detail-row"><strong>Registered Since:</strong> {{ patient.date_joined|date:"M d, Y" }}</div>
+            </div>
+
+            <div class="banner-col">
+                <h4>Demographics & Contact</h4>
+                <div class="detail-row"><strong>Gender:</strong> {{ patient.get_gender_display|default:"Not specified" }}</div>
+                <div class="detail-row"><strong>Age / DOB:</strong> {% if patient.get_age %}{{ patient.get_age }} yrs{% endif %} ({{ patient.date_of_birth|date:"M d, Y"|default:"N/A" }})</div>
+                <div class="detail-row"><strong>Phone:</strong> {{ patient.phone|default:"N/A" }}</div>
+                <div class="detail-row"><strong>Email:</strong> {{ patient.email|default:"N/A" }}</div>
+            </div>
+
+            <div class="banner-col">
+                <h4>Clinical Summary</h4>
+                <div class="detail-row"><strong>Total Visits:</strong> {{ appointments.count }}</div>
+                <div class="detail-row"><strong>Recorded Encounters:</strong> {{ histories.count }}</div>
+                <div class="detail-row"><strong>Lab Tests:</strong> {{ lab_tests.count }}</div>
+            </div>
+        </div>
+
+        <!-- Address if present -->
+        {% if patient.address %}
+        <div style="margin-top: -14px; margin-bottom: 20px; font-size: 11.5px; color: #475569; padding: 6px 12px; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0;">
+            <strong>Residential Address:</strong> {{ patient.address }}
+        </div>
+        {% endif %}
+
+        <!-- Consultation & Clinical History -->
+        <div class="section-title">
+            <i class="fas fa-stethoscope"></i> Clinical Encounters & Diagnosis History
+        </div>
+
+        {% if histories %}
+            {% for h in histories %}
+            <div class="encounter-card">
+                <div class="encounter-header">
+                    <div class="encounter-date">
+                        <i class="far fa-calendar-alt" style="color: #0d9488; margin-right: 4px;"></i>
+                        Visit Date: {{ h.visit_date|date:"F d, Y" }}
+                    </div>
+                    <div class="encounter-doctor">
+                        <i class="fas fa-user-doctor"></i> Attending: Dr. {{ h.doctor.get_full_name|default:h.doctor.username }} ({{ h.doctor.specialization|default:"General" }})
+                    </div>
+                </div>
+
+                <!-- Vitals -->
+                {% if h.blood_pressure or h.temperature or h.pulse or h.weight %}
+                <div class="vitals-strip">
+                    {% if h.blood_pressure %}
+                    <div class="vital-box"><div class="v-label">Blood Pressure</div><div class="v-val">{{ h.blood_pressure }}</div></div>
+                    {% endif %}
+                    {% if h.pulse %}
+                    <div class="vital-box"><div class="v-label">Pulse Rate</div><div class="v-val">{{ h.pulse }} bpm</div></div>
+                    {% endif %}
+                    {% if h.temperature %}
+                    <div class="vital-box"><div class="v-label">Temperature</div><div class="v-val">{{ h.temperature }} °F</div></div>
+                    {% endif %}
+                    {% if h.weight %}
+                    <div class="vital-box"><div class="v-label">Weight</div><div class="v-val">{{ h.weight }} kg</div></div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <!-- Symptoms -->
+                {% if h.symptoms %}
+                <div class="clinical-block">
+                    <div class="cb-label"><i class="fas fa-notes-medical"></i> Symptoms & Chief Complaints</div>
+                    <div class="cb-val">{{ h.symptoms }}</div>
+                </div>
+                {% endif %}
+
+                <!-- Diagnosis -->
+                {% if h.diagnosis %}
+                <div class="clinical-block">
+                    <div class="cb-label"><i class="fas fa-stethoscope"></i> Clinical Diagnosis</div>
+                    <div class="cb-val" style="font-weight: 700; color: #0f172a;">{{ h.diagnosis }}</div>
+                </div>
+                {% endif %}
+
+                <!-- Prescription -->
+                {% if h.prescription %}
+                <div class="rx-box">
+                    <div class="rx-title"><i class="fas fa-prescription"></i> Rx / Prescribed Medications</div>
+                    <div class="rx-content">{{ h.prescription }}</div>
+                </div>
+                {% endif %}
+
+                <!-- Notes / Advice -->
+                {% if h.notes %}
+                <div class="clinical-block" style="margin-top: 10px;">
+                    <div class="cb-label"><i class="fas fa-clipboard-check"></i> Doctor's Advice & Instructions</div>
+                    <div class="cb-val">{{ h.notes }}</div>
+                </div>
+                {% endif %}
+
+                <!-- Follow Up -->
+                {% if h.follow_up_required %}
+                <div style="margin-top: 8px; font-size: 11.5px; color: #92400e; background: #fffbeb; padding: 6px 10px; border-radius: 6px; border: 1px solid #fcd34d;">
+                    <i class="fas fa-calendar-check"></i> <strong>Follow-up Scheduled:</strong> {{ h.follow_up_date|date:"F d, Y" }}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        {% else %}
+            <div style="padding: 20px; background: #f8fafc; border-radius: 8px; text-align: center; color: #64748b; margin-bottom: 20px;">
+                No prior clinical encounters recorded for this patient.
+            </div>
+        {% endif %}
+
+        <!-- Diagnostic Laboratory Tests -->
+        {% if lab_tests %}
+        <div class="section-title" style="margin-top: 24px;">
+            <i class="fas fa-vial-circle-check"></i> Diagnostic Laboratory Investigations
+        </div>
+        <table class="lab-table">
+            <thead>
+                <tr>
+                    <th>Test Name</th>
+                    <th>Ordered Date</th>
+                    <th>Ordering Physician</th>
+                    <th>Status</th>
+                    <th>Result / Findings</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for test in lab_tests %}
+                <tr>
+                    <td style="font-weight: 700; color: #0f172a;">{{ test.test_name }}</td>
+                    <td>{{ test.ordered_date|date:"M d, Y" }}</td>
+                    <td>Dr. {{ test.doctor.get_full_name|default:test.doctor.username }}</td>
+                    <td>
+                        {% if test.status == 'COMPLETED' %}
+                            <span class="lab-status-badge status-completed">Completed</span>
+                        {% else %}
+                            <span class="lab-status-badge status-pending">{{ test.get_status_display }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ test.result_notes|default:"Pending lab analysis" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+
+        <!-- Signatures and Official Stamp -->
+        <div class="signature-section">
+            <div class="sign-box">
+                <div class="sign-line"></div>
+                <div class="sign-label">Hospital Medical Records Registrar</div>
+            </div>
+            <div style="text-align: center;">
+                <div style="display: inline-block; border: 2px dashed #0d9488; color: #0d9488; border-radius: 50%; width: 70px; height: 70px; line-height: 1.1; padding-top: 16px; font-size: 9px; font-weight: 800; text-transform: uppercase;">
+                    OFFICIAL<br>HMC SEAL
+                </div>
+            </div>
+            <div class="sign-box">
+                <div class="sign-line" style="display: flex; align-items: flex-end; justify-content: center; font-weight: 700; color: #0d9488;">
+                    {% if primary_doctor %}Dr. {{ primary_doctor.get_full_name }}{% endif %}
+                </div>
+                <div class="sign-label">Attending Medical Consultant</div>
+            </div>
+        </div>
+
+        <!-- Document Footer -->
+        <div class="file-footer">
+            <div>Healthcare Medical Complex (HMC) &bull; Confidential Patient File</div>
+            <div>Generated electronically &bull; Page 1 of 1</div>
+        </div>
+
+    </div>
+
+</body>
+</html>

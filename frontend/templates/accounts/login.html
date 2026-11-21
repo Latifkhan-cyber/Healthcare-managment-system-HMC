@@ -1,7 +1,7 @@
 {% extends 'base/base.html' %}
 {% load static %}
 
-{% block title %}Sign In | Healthcare Management{% endblock %}
+{% block title %}Sign In | Healthcare Management System{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -10,7 +10,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 32px 16px;
+    padding: 40px 16px;
     box-sizing: border-box;
     width: 100%;
   }
@@ -18,13 +18,19 @@
   .auth-card {
     background: #ffffff;
     width: 100%;
-    max-width: 440px;
-    border-radius: 18px;
+    max-width: 460px;
+    border-radius: 20px;
     border: 1px solid #e2e8f0;
-    box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.06), 0 4px 10px -2px rgba(0, 0, 0, 0.03);
-    padding: 36px 32px;
+    box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.08), 0 0 1px 1px rgba(0, 0, 0, 0.02);
+    padding: 40px 36px;
     box-sizing: border-box;
     animation: authFadeIn 0.35s ease-out;
+  }
+
+  [data-theme="dark"] .auth-card {
+    background: #1e293b;
+    border-color: #334155;
+    box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.4);
   }
 
   @keyframes authFadeIn {
@@ -40,30 +46,33 @@
 
   .auth-header {
     text-align: center;
-    margin-bottom: 28px;
+    margin-bottom: 26px;
   }
 
   .auth-icon-badge {
-    width: 54px;
-    height: 54px;
-    background: #f0fdfa;
-    color: #0d9488;
-    border-radius: 14px;
+    width: 56px;
+    height: 56px;
+    background: linear-gradient(135deg, #0d9488, #0f766e);
+    color: #ffffff;
+    border-radius: 16px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.4rem;
+    font-size: 1.5rem;
     margin-bottom: 14px;
-    border: 1px solid #ccfbf1;
-    box-shadow: 0 4px 12px rgba(13, 148, 136, 0.12);
+    box-shadow: 0 8px 20px rgba(13, 148, 136, 0.28);
   }
 
   .auth-title {
-    font-size: 1.6rem;
+    font-size: 1.65rem;
     font-weight: 800;
     color: #0f172a;
     margin: 0 0 6px;
     letter-spacing: -0.02em;
+  }
+
+  [data-theme="dark"] .auth-title {
+    color: #f8fafc;
   }
 
   .auth-subtitle {
@@ -71,6 +80,74 @@
     color: #64748b;
     margin: 0;
     line-height: 1.45;
+  }
+
+  [data-theme="dark"] .auth-subtitle {
+    color: #94a3b8;
+  }
+
+  /* Quick Demo Login Pills */
+  .demo-accounts-section {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 22px;
+  }
+
+  [data-theme="dark"] .demo-accounts-section {
+    background: #0f172a;
+    border-color: #334155;
+  }
+
+  .demo-accounts-title {
+    font-size: 0.76rem;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: #64748b;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .demo-pills-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+  }
+
+  .demo-pill-btn {
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #334155;
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 6px 4px;
+    border-radius: 8px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s ease;
+  }
+
+  [data-theme="dark"] .demo-pill-btn {
+    background: #1e293b;
+    border-color: #475569;
+    color: #cbd5e1;
+  }
+
+  .demo-pill-btn:hover {
+    border-color: #0d9488;
+    color: #0d9488;
+    background: #f0fdfa;
+    transform: translateY(-1px);
+  }
+
+  [data-theme="dark"] .demo-pill-btn:hover {
+    background: #134e4a;
+    color: #5eead4;
+    border-color: #0d9488;
   }
 
   /* Form Fields */
@@ -93,6 +170,10 @@
     color: #334155;
   }
 
+  [data-theme="dark"] .form-field-group label {
+    color: #cbd5e1;
+  }
+
   .input-wrapper {
     position: relative;
     display: flex;
@@ -100,13 +181,21 @@
     width: 100%;
   }
 
+  .input-icon {
+    position: absolute;
+    left: 14px;
+    color: #94a3b8;
+    font-size: 0.95rem;
+    pointer-events: none;
+  }
+
   .input-wrapper input {
     width: 100%;
     box-sizing: border-box;
-    padding: 12px 16px;
+    padding: 12px 14px 12px 40px;
     font-size: 0.95rem;
     border: 1.5px solid #cbd5e1;
-    border-radius: 10px;
+    border-radius: 12px;
     background: #ffffff;
     color: #0f172a;
     font-family: inherit;
@@ -115,9 +204,15 @@
     -webkit-appearance: none;
   }
 
+  [data-theme="dark"] .input-wrapper input {
+    background: #0f172a;
+    border-color: #334155;
+    color: #f8fafc;
+  }
+
   .input-wrapper input:focus {
     border-color: #0d9488;
-    box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
+    box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.18);
   }
 
   .password-toggle-btn {
@@ -128,7 +223,7 @@
     color: #94a3b8;
     cursor: pointer;
     font-size: 0.95rem;
-    padding: 4px 6px;
+    padding: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -153,36 +248,45 @@
     background: #fff1f2;
     border: 1px solid #fecdd3;
     color: #be123c;
-    padding: 10px 14px;
-    border-radius: 10px;
+    padding: 12px 14px;
+    border-radius: 12px;
     font-size: 0.88rem;
-    margin-bottom: 6px;
+    margin-bottom: 12px;
     text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  [data-theme="dark"] .form-non-field-errors {
+    background: rgba(225, 29, 72, 0.15);
+    border-color: rgba(225, 29, 72, 0.3);
+    color: #fda4af;
   }
 
   .auth-submit-btn {
     width: 100%;
-    background: #0d9488;
+    background: linear-gradient(135deg, #0d9488, #0f766e);
     color: #ffffff;
     font-size: 1rem;
     font-weight: 700;
     padding: 13px 20px;
     border: none;
-    border-radius: 10px;
+    border-radius: 12px;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    box-shadow: 0 4px 14px rgba(13, 148, 136, 0.25);
+    box-shadow: 0 6px 18px rgba(13, 148, 136, 0.28);
     transition: all 0.2s ease;
-    margin-top: 8px;
+    margin-top: 6px;
   }
 
   .auth-submit-btn:hover {
-    background: #0f766e;
+    background: linear-gradient(135deg, #0f766e, #115e59);
     transform: translateY(-1px);
-    box-shadow: 0 6px 18px rgba(13, 148, 136, 0.35);
+    box-shadow: 0 8px 22px rgba(13, 148, 136, 0.38);
   }
 
   .auth-submit-btn:active {
@@ -202,6 +306,11 @@
     gap: 12px;
   }
 
+  [data-theme="dark"] .auth-footer-links {
+    border-color: #334155;
+    color: #94a3b8;
+  }
+
   .auth-link {
     color: #0d9488;
     font-weight: 600;
@@ -215,16 +324,8 @@
   }
 
   .forgot-link {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
     font-size: 0.84rem;
-    color: #64748b;
-  }
-
-  .forgot-link:hover {
-    color: #0f172a;
+    color: #0d9488;
   }
 
   .back-home-link {
@@ -235,7 +336,7 @@
     font-size: 0.84rem;
     color: #94a3b8;
     text-decoration: none;
-    margin-top: 6px;
+    margin-top: 4px;
     transition: color 0.2s;
   }
 
@@ -243,17 +344,19 @@
     color: #475569;
   }
 
-  /* Responsive for mobile */
   @media (max-width: 480px) {
     .auth-page-container {
-      padding: 16px 12px;
+      padding: 20px 12px;
     }
     .auth-card {
-      padding: 26px 20px;
-      border-radius: 14px;
+      padding: 28px 20px;
+      border-radius: 16px;
     }
     .auth-title {
       font-size: 1.4rem;
+    }
+    .demo-pills-grid {
+      grid-template-columns: repeat(2, 1fr);
     }
   }
 </style>
@@ -265,36 +368,62 @@
     <!-- Header -->
     <div class="auth-header">
       <div class="auth-icon-badge">
-        <i class="fas fa-lock"></i>
+        <i class="fas fa-user-shield"></i>
       </div>
       <h1 class="auth-title">Welcome Back</h1>
-      <p class="auth-subtitle">Please enter your credentials to access your account</p>
+      <p class="auth-subtitle">Sign in to your Healthcare account</p>
+    </div>
+
+    <!-- Quick Demo Accounts Selection -->
+    <div class="demo-accounts-section">
+      <div class="demo-accounts-title">
+        <span><i class="fas fa-bolt"></i> Quick Demo Login</span>
+        <span style="font-size: 0.7rem; font-weight: normal; text-transform: none;">Click to auto-fill</span>
+      </div>
+      <div class="demo-pills-grid">
+        <button type="button" class="demo-pill-btn" onclick="fillDemo('dr_fatima', 'doctor123')">
+          <i class="fas fa-user-doctor"></i> Doctor
+        </button>
+        <button type="button" class="demo-pill-btn" onclick="fillDemo('admin', 'admin123')">
+          <i class="fas fa-shield-halved"></i> Admin
+        </button>
+        <button type="button" class="demo-pill-btn" onclick="fillDemo('receptionist', 'admin123')">
+          <i class="fas fa-headset"></i> Recep.
+        </button>
+        <button type="button" class="demo-pill-btn" onclick="fillDemo('hamza', 'patient123')">
+          <i class="fas fa-user"></i> Patient
+        </button>
+      </div>
     </div>
 
     <!-- Non-field Errors (e.g. invalid username/password) -->
     {% if form.non_field_errors %}
       <div class="form-non-field-errors">
-        {% for error in form.non_field_errors %}
-          <div><i class="fas fa-circle-exclamation"></i> {{ error }}</div>
-        {% endfor %}
+        <i class="fas fa-circle-exclamation"></i>
+        <div>
+          {% for error in form.non_field_errors %}
+            <div>{{ error }}</div>
+          {% endfor %}
+        </div>
       </div>
     {% endif %}
 
     <!-- Form -->
-    <form method="post" class="auth-form" autocomplete="on">
+    <form method="post" class="auth-form" autocomplete="on" id="loginForm">
       {% csrf_token %}
-      <input type="hidden" name="next" value="{{ request.GET.next }}">
+      <input type="hidden" name="next" value="{{ next_url }}">
 
-      <!-- Username / ID Field -->
+      <!-- Username / Patient ID / Email Field -->
       <div class="form-field-group">
-        <label for="{{ form.username.id_for_label }}">Username or Patient ID</label>
+        <label for="id_username">Username, Patient ID, or Email</label>
         <div class="input-wrapper">
+          <i class="fas fa-user input-icon"></i>
           <input 
             type="text" 
-            name="{{ form.username.name }}" 
-            id="{{ form.username.id_for_label }}"
+            name="username" 
+            id="id_username"
             value="{{ form.username.value|default:'' }}"
-            placeholder="e.g. MQ-000001 or username" 
+            placeholder="e.g. dr_fatima, MQ-000001, or email" 
             required 
             autofocus
           >
@@ -309,23 +438,24 @@
       <!-- Password Field with Toggle -->
       <div class="form-field-group">
         <div style="display: flex; justify-content: space-between; align-items: center;">
-          <label for="{{ form.password.id_for_label }}">Password</label>
+          <label for="id_password">Password</label>
           <a href="{% url 'password_reset' %}" class="auth-link forgot-link">
             Forgot password?
           </a>
         </div>
         <div class="input-wrapper">
+          <i class="fas fa-lock input-icon"></i>
           <input 
             type="password" 
-            name="{{ form.password.name }}" 
-            id="{{ form.password.id_for_label }}"
+            name="password" 
+            id="id_password"
             placeholder="••••••••" 
             required
           >
           <button 
             type="button" 
             class="password-toggle-btn" 
-            onclick="togglePasswordVisibility('{{ form.password.id_for_label }}', this)"
+            onclick="togglePasswordVisibility('id_password', this)"
             aria-label="Toggle password visibility"
           >
             <i class="far fa-eye"></i>
@@ -339,7 +469,7 @@
       </div>
 
       <!-- Submit Button -->
-      <button type="submit" class="auth-submit-btn">
+      <button type="submit" class="auth-submit-btn" id="signInBtn">
         <i class="fas fa-arrow-right-to-bracket"></i>
         <span>Sign In</span>
       </button>
@@ -375,6 +505,16 @@
         icon.classList.remove('fa-eye-slash');
         icon.classList.add('fa-eye');
       }
+    }
+  }
+
+  function fillDemo(username, password) {
+    const usernameInput = document.getElementById('id_username');
+    const passwordInput = document.getElementById('id_password');
+    if (usernameInput && passwordInput) {
+      usernameInput.value = username;
+      passwordInput.value = password;
+      usernameInput.focus();
     }
   }
 </script>

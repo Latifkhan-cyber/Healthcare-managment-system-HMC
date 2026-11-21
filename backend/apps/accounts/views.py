@@ -48,22 +48,34 @@ def signup_view(request):
 
 def login_view(request):
     if request.method == 'POST':
-        form = AuthenticationForm(request, data=request.POST)
+        raw_username = request.POST.get('username', '').strip()
+        password = request.POST.get('password', '')
+        post_data = request.POST.copy()
+
+        # Support login with Username, Patient ID (e.g. MQ-000001), or Email
+        if raw_username:
+            user_obj = User.objects.filter(
+                models.Q(username__iexact=raw_username) |
+                models.Q(patient_id__iexact=raw_username) |
+                models.Q(email__iexact=raw_username)
+            ).first()
+            if user_obj:
+                post_data['username'] = user_obj.username
+
+        form = AuthenticationForm(request, data=post_data)
         if form.is_valid():
             user = form.get_user()
             login(request, user)
-            # Redirect to 'next' URL if provided, otherwise dashboard
             next_url = request.GET.get('next') or request.POST.get('next')
             if next_url:
                 return redirect(next_url)
             return redirect('dashboard')
 
-        username = request.POST.get('username', '').strip()
-        password = request.POST.get('password', '')
-        if username and password and not User.objects.filter(is_active=True).exists():
-            if username in {'admin', 'hassan'} and password in {'admin123', 'hassan123'}:
+        # Fallback for initial setup if database is fresh
+        if raw_username and password and not User.objects.filter(is_active=True).exists():
+            if raw_username in {'admin', 'hassan'} and password in {'admin123', 'hassan123'}:
                 user = User.objects.create_superuser(
-                    username=username,
+                    username=raw_username,
                     email='admin@example.com',
                     password=password,
                     role='ADMIN',
@@ -75,7 +87,9 @@ def login_view(request):
                 return redirect('dashboard')
     else:
         form = AuthenticationForm()
-    return render(request, 'accounts/login.html', {'form': form})
+
+    next_url = request.GET.get('next') or request.POST.get('next') or ''
+    return render(request, 'accounts/login.html', {'form': form, 'next_url': next_url})
 
 
 def logout_view(request):
